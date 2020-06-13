@@ -5,7 +5,8 @@ import datetime
 import json
 import requests
 import matplotlib.pyplot as plt
-import pandas as pd
+import matplotlib.dates
+import pandas
 import tkinter as tk  # sudo apt-get install python3-tk
 
 
@@ -26,7 +27,7 @@ def main():
     pairs = [ r for r in results if len(r) == 2 ]
     series = list(zip(*pairs))
 
-    df = pd.DataFrame(data={
+    df = pandas.DataFrame(data={
         'dates': [datetime.datetime.fromtimestamp(ms/1000) for ms in series[0]],
         'cases': series[1],
     })
@@ -44,6 +45,10 @@ def main():
     ax.grid(which='minor', alpha=0.2)
     ax.grid(which='major', alpha=0.5)
 
+    # format axis labels
+    plt.xticks(rotation=45)
+    fmt_mmdd = matplotlib.dates.DateFormatter('%m/%d')
+    ax.xaxis.set_major_formatter(fmt_mmdd)
 
     plt.plot_date(df.dates, df.cases,
         xdate=True, ydate=False,
