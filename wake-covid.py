@@ -14,7 +14,7 @@ def main():
 
     parser = argparse.ArgumentParser(description='Wake County COVID-19 grapher')
     parser.add_argument('--avg', type=int, default=7, help='size of sliding average', required=False)
-    parser.add_argument('--log', type=bool, default=False, help='logarithmic scale', required=False)
+    parser.add_argument('--log', action='store_true', default=False, help='logarithmic scale', required=False)
     args = vars(parser.parse_args())
     print(json.dumps(args))
 
