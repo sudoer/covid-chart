@@ -35,22 +35,12 @@ def main():
     ax = fig.add_subplot(1, 1, 1)
     ax.set_yscale('log')
 
-    ## # Major ticks every 20, minor ticks every 5
-    ## major_ticks = np.arange(0, 101, 20)
-    ## minor_ticks = np.arange(0, 101, 5)
-
-    ## ax.set_xticks(major_ticks)
-    ## ax.set_xticks(minor_ticks, minor=True)
-    ## ax.set_yticks(major_ticks)
-    ## ax.set_yticks(minor_ticks, minor=True)
-
     # And a corresponding grid
     ax.grid(which='both')
 
     # Or if you want different settings for the grids:
     ax.grid(which='minor', alpha=0.2)
     ax.grid(which='major', alpha=0.5)
-
 
 
     plt.plot_date(df.dates, df.cases,
@@ -71,6 +61,10 @@ def main():
 
 
 def pull_raw_json():
+    """
+    This POST was basically copied from the "view cases by day" graph on https://covid19.wakegov.com/
+    I am pretty sure it could be trimmed a bit... it looks like overkill.
+    """
 
     rsp = requests.post('https://wabi-us-gov-virginia-api.analysis.usgovcloudapi.net/public/reports/querydata',
         params={
@@ -146,20 +140,6 @@ def pull_raw_json():
         })
     )
     return json.loads(rsp.content)
-
-
-
-# jq -c .results[0].result.data.dsr.DS[0].PH[0].DM0[].C < out1 > out2
-#
-# yestcases=0
-# grep ',' out2 | sed -e 's/^\[//g' -e 's/\]$//g' | while read ln ; do
-#     dateint=${ln%,*}
-#     cases=${ln#*,}
-#     # echo "dateint=[$dateint] cases=[$cases]"
-#     date=$(date -d "@$(($dateint/1000))" "+%Y-%m-%d")
-#     echo "$date,$cases,$(($cases-$yestcases))"
-#     yestcases=$cases
-# done > out3.csv
 
 
 if __name__ == "__main__":
