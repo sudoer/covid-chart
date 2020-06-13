@@ -12,7 +12,8 @@ import tkinter as tk  # sudo apt-get install python3-tk
 def main():
 
     parser = argparse.ArgumentParser(description='Wake County COVID-19 grapher')
-    parser.add_argument('-a','--avg', type=int, default=7, help='size of sliding average', required=False)
+    parser.add_argument('--avg', type=int, default=7, help='size of sliding average', required=False)
+    parser.add_argument('--log', type=bool, default=False, help='logarithmic scale', required=False)
     args = vars(parser.parse_args())
     print(json.dumps(args))
 
@@ -33,7 +34,8 @@ def main():
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
-    ax.set_yscale('log')
+    if args['log']:
+        ax.set_yscale('log')
 
     # And a corresponding grid
     ax.grid(which='both')
