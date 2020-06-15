@@ -15,6 +15,7 @@ def main():
     parser = argparse.ArgumentParser(description='Wake County COVID-19 grapher')
     parser.add_argument('--avg', dest='avg', type=int, default=7, help='size of sliding average', required=False)
     parser.add_argument('--log', dest='log', action='store_true', default=False, help='logarithmic scale', required=False)
+    parser.add_argument('--new', dest='new', action='store_true', default=False, help='logarithmic scale', required=False)
     args = vars(parser.parse_args())
     print(json.dumps(args))
 
@@ -31,6 +32,7 @@ def main():
         'dates': [datetime.datetime.fromtimestamp(ms/1000) for ms in series[0]],
         'cases': series[1],
     })
+    df.diff = df.cases.diff()
 
 
     fig = plt.figure()
@@ -50,11 +52,15 @@ def main():
     fmt_mmdd = matplotlib.dates.DateFormatter('%m/%d')
     ax.xaxis.set_major_formatter(fmt_mmdd)
 
-    plt.plot_date(df.dates, df.cases,
+    series = df.cases
+    if args['new']:
+        series = df.diff
+
+    plt.plot_date(df.dates, series,
         xdate=True, ydate=False,
         marker='.',
         color='blue')
-    plt.plot_date(df.dates, df.cases.rolling(window=args['avg']).mean(),
+    plt.plot_date(df.dates, series.rolling(window=args['avg']).mean(),
         xdate=True, ydate=False,
         label='average',
         marker=None,
