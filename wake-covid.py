@@ -26,6 +26,8 @@ def main():
         pairs = get_wake_data()
     else:
         pairs = get_state_data(args['location'])
+    # Remove today's partial-day numbers.
+    pairs.pop(-1)
     series = list(zip(*pairs))
 
     df = pandas.DataFrame(data={
@@ -91,8 +93,6 @@ def get_state_data(state):
                     province_state=row[0]
                     if province_state == state:
                         results.append([date, int(row[5])])
-    # Remove today's partial-day numbers.
-    results.pop(-1)
     return results
 
 
