@@ -69,6 +69,16 @@ def main():
         linestyle='solid', linewidth=2,
         color='orange')
 
+    title = '%s %s cases (%s) with %d-day average' % (
+        args['location'],
+        'new' if args['new'] else 'cumulative',
+        'log' if args['log'] else 'linear',
+        args['avg'],
+    )
+    ax.set_title(title)
+    ylabel = '%s cases' % ('new' if args['new'] else 'cumulative')
+    ax.set_ylabel(ylabel)
+
     plt.show()
 
 
