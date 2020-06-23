@@ -91,6 +91,8 @@ def get_state_data(state):
                     province_state=row[0]
                     if province_state == state:
                         results.append([date, int(row[5])])
+    # Remove today's partial-day numbers.
+    results.pop(-1)
     return results
 
 
