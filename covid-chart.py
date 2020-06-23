@@ -18,14 +18,20 @@ def main():
     parser.add_argument('--avg', dest='avg', type=int, default=7, help='size of sliding average', required=False)
     parser.add_argument('--log', dest='log', action='store_true', default=False, help='logarithmic scale', required=False)
     parser.add_argument('--new', dest='new', action='store_true', default=False, help='new cases', required=False)
-    parser.add_argument('--location', dest='location', default='wake', help='location', required=False)
+    parser.add_argument('--source', dest='source', default='jhu', help='jhu or wake', required=False)
+    parser.add_argument('--jhu-data-dir', dest='jhu-data-dir', default='COVID-19', help='name of JHU git directory', required=False)
+    parser.add_argument('--county', dest='county', default=None, help='US county', required=False)
+    parser.add_argument('--state', dest='state', default=None, help='US state', required=False)
+    parser.add_argument('--country', dest='country', default='US', help='country', required=False)
     args = vars(parser.parse_args())
     print(json.dumps(args))
 
-    if args['location'] == 'wake':
+    if args['source'] == 'wake':
         pairs = get_wake_data()
-    else:
-        pairs = get_state_data(args['location'])
+        location = 'Wake County'
+    if args['source'] == 'jhu':
+        location = get_location(args['country'], args['state'], args['county'])
+        pairs = get_jhu_data(args['jhu-data-dir'], args['country'], args['state'], args['county'])
     # Remove today's partial-day numbers.
     pairs.pop(-1)
     series = list(zip(*pairs))
@@ -60,20 +66,19 @@ def main():
 
     plt.plot_date(df.dates, series,
         xdate=True, ydate=False,
+        label='%s cases' % 'new' if args['new'] else 'cumulative',
         marker='.',
         color='blue')
     plt.plot_date(df.dates, series.rolling(window=args['avg']).mean(),
         xdate=True, ydate=False,
-        label='average',
+        label='%d-day average' % args['avg'],
         marker=None,
         linestyle='solid', linewidth=2,
         color='orange')
 
-    title = '%s %s cases (%s) with %d-day average' % (
-        args['location'],
+    title = '%s %s cases' % (
+        location,
         'new' if args['new'] else 'cumulative',
-        'log' if args['log'] else 'linear',
-        args['avg'],
     )
     ax.set_title(title)
     ylabel = '%s cases' % ('new' if args['new'] else 'cumulative')
@@ -82,9 +87,32 @@ def main():
     plt.show()
 
 
-def get_state_data(state):
+def get_location(country, state, county=None):
+    if county:
+        location = '%s county, %s (%s)' % (county, state, country)
+    else:
+        location = '%s (%s)' % (state, country)
+    return location
+
+
+def get_jhu_data(git_root, country, state, county=None):
     results = []
-    dir_name = 'jhu-csse-covid19/csse_covid_19_data/csse_covid_19_daily_reports_us'
+    if county:
+        dir_name = git_root + '/csse_covid_19_data/csse_covid_19_daily_reports'
+        # FIPS,Admin2,Province_State,Country_Region,Last_Update,Lat,Long_,Confirmed,Deaths,Recovered,Active,Combined_Key,Incidence_Rate,Case-Fatality_Ratio
+        # 45001,Abbeville,South Carolina,US,2020-06-22 04:33:20,34.22333378,-82.46170658,88,0,0,88,"Abbeville, South Carolina, US",358.78827414685856,0.0
+        country_col = 3
+        state_col = 2
+        county_col = 1
+        case_col = 7
+    else:
+        dir_name = git_root + '/csse_covid_19_data/csse_covid_19_daily_reports_us'
+        # Province_State,Country_Region,Last_Update,Lat,Long_,Confirmed,Deaths,Recovered,Active,FIPS,Incident_Rate,People_Tested,People_Hospitalized,Mortality_Rate,UID,ISO3,Testing_Rate,Hospitalization_Rate
+        # Alabama,US,2020-06-22 04:33:33,32.3182,-86.9023,30021,839,15974,13208.0,1,612.2754903190478,344678,2460,2.794710369408081,84000001,USA,7029.675608813455,8.194264015189367
+        country_col = 1
+        state_col = 0
+        county_col = None
+        case_col = 5
     for file_name in sorted(os.listdir(dir_name)):
         if file_name.endswith(".csv"):
             date = datetime.datetime.strptime(file_name.split('.')[0], '%m-%d-%Y')
@@ -92,17 +120,13 @@ def get_state_data(state):
             with open(csv_filename) as csvfile:
                 reader = csv.reader(csvfile)
                 for row in reader:
-                    # Province_State,Country_Region,Last_Update,Lat,Long_,Confirmed,Deaths,Recovered,Active,FIPS,Incident_Rate,People_Tested,People_Hospitalized,Mortality_Rate,UID,ISO3,Testing_Rate,Hospitalization_Rate
-                    # 0 = Province_State
-                    # 1 = Country_Region
-                    # 2 = Last_Update
-                    # 3 = Lat
-                    # 4 = Long_
-                    # 5 = Confirmed
-                    # 6 = Deaths
-                    province_state=row[0]
-                    if province_state == state:
-                        results.append([date, int(row[5])])
+                    if row[country_col] != country:
+                        continue
+                    if row[state_col] != state:
+                        continue
+                    if county is not None and row[county_col] != county:
+                        continue
+                    results.append([date, int(row[case_col])])
     return results
 
 
