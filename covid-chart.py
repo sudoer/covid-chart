@@ -98,6 +98,7 @@ def get_location(country, state, county=None):
 def get_jhu_data(git_root, country, state, county=None):
     results = []
     if county:
+        # COUNTY LEVEL data
         dir_name = git_root + '/csse_covid_19_data/csse_covid_19_daily_reports'
         # FIPS,Admin2,Province_State,Country_Region,Last_Update,Lat,Long_,Confirmed,Deaths,Recovered,Active,Combined_Key,Incidence_Rate,Case-Fatality_Ratio
         # 45001,Abbeville,South Carolina,US,2020-06-22 04:33:20,34.22333378,-82.46170658,88,0,0,88,"Abbeville, South Carolina, US",358.78827414685856,0.0
@@ -106,6 +107,7 @@ def get_jhu_data(git_root, country, state, county=None):
         county_col = 1
         case_col = 7
     else:
+        # STATE and COUNTRY LEVEL data
         dir_name = git_root + '/csse_covid_19_data/csse_covid_19_daily_reports_us'
         # Province_State,Country_Region,Last_Update,Lat,Long_,Confirmed,Deaths,Recovered,Active,FIPS,Incident_Rate,People_Tested,People_Hospitalized,Mortality_Rate,UID,ISO3,Testing_Rate,Hospitalization_Rate
         # Alabama,US,2020-06-22 04:33:33,32.3182,-86.9023,30021,839,15974,13208.0,1,612.2754903190478,344678,2460,2.794710369408081,84000001,USA,7029.675608813455,8.194264015189367
@@ -116,17 +118,32 @@ def get_jhu_data(git_root, country, state, county=None):
     for file_name in sorted(os.listdir(dir_name)):
         if file_name.endswith(".csv"):
             date = datetime.datetime.strptime(file_name.split('.')[0], '%m-%d-%Y')
+            total_cases = 0
             csv_filename = os.path.join(dir_name, file_name)
             with open(csv_filename) as csvfile:
                 reader = csv.reader(csvfile)
                 for row in reader:
+
                     if row[country_col] != country:
                         continue
-                    if row[state_col] != state:
+
+                    if state is None:
+                        total_cases += int(row[case_col])
                         continue
+                    elif row[state_col] != state:
+                        continue
+                    else:
+                        # state was given and it matches
+                        pass
+
                     if county is not None and row[county_col] != county:
                         continue
+
                     results.append([date, int(row[case_col])])
+
+            if state is None:
+                results.append([date, total_cases])
+
     return results
 
 
