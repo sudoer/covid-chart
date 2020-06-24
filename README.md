@@ -2,6 +2,30 @@
 Started as a graph of Wake County COVID-19 cases.
 Quickly grew into a graph of JHU data as well.
 
+# set-up
+
+## data sources
+
+If you want to graph the data from Johns Hopkins University, you'll need to check out their data repo.
+By default, the program looks in a folder called "COVID-19", but there is a command-line option to
+override that location.
+
+    git clone https://github.com/sudoer/covid-chart.git
+    cd covid-chart
+    git clone https://github.com/CSSEGISandData/COVID-19.git
+
+## python environment
+
+The requirements are listed in the `requirements.txt` file.  I recommend using a "virtual environment"
+(sandbox) to keep all of the dependencies local to this project, without interfering with libraries
+installed globally on your system.
+
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
+    # ready to run
+    ./covid-chart.py --state="North Carolina"
+
 # usage
 
 ## graphing Wake County data
@@ -37,4 +61,5 @@ Quickly grew into a graph of JHU data as well.
       --county COUNTY       US county (JHU data only)
       --state STATE         US state (JHU data only)
       --country COUNTRY     country (JHU data only)
+
 
