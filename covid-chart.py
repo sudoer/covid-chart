@@ -20,9 +20,9 @@ def main():
     parser.add_argument('--new', dest='new', action='store_true', default=False, help='new cases', required=False)
     parser.add_argument('--source', dest='source', default='jhu', help='jhu or wake', required=False)
     parser.add_argument('--jhu-data-dir', dest='jhu-data-dir', default='COVID-19', help='name of JHU git directory', required=False)
-    parser.add_argument('--county', dest='county', default=None, help='US county', required=False)
-    parser.add_argument('--state', dest='state', default=None, help='US state', required=False)
-    parser.add_argument('--country', dest='country', default='US', help='country', required=False)
+    parser.add_argument('--county', dest='county', default=None, help='US county (JHU data only)', required=False)
+    parser.add_argument('--state', dest='state', default=None, help='US state (JHU data only)', required=False)
+    parser.add_argument('--country', dest='country', default='US', help='country (JHU data only)', required=False)
     args = vars(parser.parse_args())
     print(json.dumps(args))
 
