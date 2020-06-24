@@ -23,6 +23,7 @@ def main():
     parser.add_argument('--county', dest='county', default=None, help='US county (JHU data only)', required=False)
     parser.add_argument('--state', dest='state', default=None, help='US state (JHU data only)', required=False)
     parser.add_argument('--country', dest='country', default='US', help='country (JHU data only)', required=False)
+    parser.add_argument('--out', dest='out', default=None, help='save to file instead of opening window', required=False)
     args = vars(parser.parse_args())
     print(json.dumps(args))
 
@@ -87,7 +88,10 @@ def main():
     ylim = ax.get_ylim()
     ax.set_ylim([0, ylim[1]])
 
-    plt.show()
+    if args['out']:
+        plt.savefig(args['out'])
+    else:
+        plt.show()
 
 
 def get_location(country, state, county=None):
