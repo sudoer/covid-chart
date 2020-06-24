@@ -84,14 +84,19 @@ def main():
     ylabel = '%s cases' % ('new' if args['new'] else 'cumulative')
     ax.set_ylabel(ylabel)
 
+    ylim = ax.get_ylim()
+    ax.set_ylim([0, ylim[1]])
+
     plt.show()
 
 
 def get_location(country, state, county=None):
     if county:
         location = '%s county, %s (%s)' % (county, state, country)
-    else:
+    elif state:
         location = '%s (%s)' % (state, country)
+    else:
+        location = '%s (all states)' % country
     return location
 
 
