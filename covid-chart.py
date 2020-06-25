@@ -70,17 +70,20 @@ def main():
         label='%s cases' % 'new' if args['new'] else 'cumulative',
         marker='.',
         color='blue')
-    plt.plot_date(df.dates, series.rolling(window=args['avg']).mean(),
-        xdate=True, ydate=False,
-        label='%d-day average' % args['avg'],
-        marker=None,
-        linestyle='solid', linewidth=2,
-        color='orange')
+    if args['avg']:
+        plt.plot_date(df.dates, series.rolling(window=args['avg']).mean(),
+            xdate=True, ydate=False,
+            label='%d-day average' % args['avg'],
+            marker=None,
+            linestyle='solid', linewidth=2,
+            color='orange')
 
     title = '%s %s cases' % (
         location,
         'new' if args['new'] else 'cumulative',
     )
+    if args['avg']:
+        title = title + " (%s moving average)" % args['avg']
     ax.set_title(title)
     ylabel = '%s cases' % ('new' if args['new'] else 'cumulative')
     ax.set_ylabel(ylabel)
