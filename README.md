@@ -30,8 +30,8 @@ installed globally on your system.
 
 ## graphing Wake County data
 
+* cumulative cases: `./covid-chart.py --source=wake`
 * new cases: `./covid-chart.py --source=wake --new`
-* cumulative cases: `./covid-chart.py --source=wake --new`
 * logarithmic chart: `./covid-chart.py --source=wake --log`
 * custom moving average: `./covid-chart.py --source=wake --avg=10`
 
