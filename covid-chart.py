@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates
 import os
 import pandas
+import dateutil.parser
 import tkinter as tk  # sudo apt-get install python3-tk
 
 
@@ -50,10 +51,10 @@ def main():
         required=False,
     )
     parser.add_argument(
-        "--county",
-        dest="county",
-        default=None,
-        help="US county (JHU data only)",
+        "--country",
+        dest="country",
+        default="US",
+        help="country (JHU data only)",
         required=False,
     )
     parser.add_argument(
@@ -64,10 +65,24 @@ def main():
         required=False,
     )
     parser.add_argument(
-        "--country",
-        dest="country",
-        default="US",
-        help="country (JHU data only)",
+        "--county",
+        dest="county",
+        default=None,
+        help="US county (JHU data only)",
+        required=False,
+    )
+    parser.add_argument(
+        "--start-date",
+        dest="start-date",
+        default=None,
+        help="start-date (YYYY-MM-DD)",
+        required=False,
+    )
+    parser.add_argument(
+        "--end-date",
+        dest="end-date",
+        default=None,
+        help="start-date (YYYY-MM-DD)",
         required=False,
     )
     parser.add_argument(
@@ -147,6 +162,15 @@ def main():
     ax.set_title(title)
     ylabel = "%s cases" % ("new" if args["new"] else "cumulative")
     ax.set_ylabel(ylabel)
+
+    # dateutil.parser can handle any conventional date/time format without us telling it what to expect
+    xmin = min(df.dates)
+    if args["start-date"]:
+        xmin = dateutil.parser.parse(args["start-date"])
+    xmax = max(df.dates)
+    if args["end-date"]:
+        xmax = dateutil.parser.parse(args["end-date"])
+    ax.set_xlim([xmin, xmax])
 
     ylim = ax.get_ylim()
     ax.set_ylim([0, ylim[1]])
