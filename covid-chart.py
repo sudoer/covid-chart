@@ -100,6 +100,30 @@ def main():
         help="save to file instead of opening window",
         required=False,
     )
+    parser.add_argument(
+        "--inches",
+        dest="inches",
+        type=str,
+        default=None,
+        help="size in inches (WWxHH)",
+        required=False,
+    )
+    parser.add_argument(
+        "--height",
+        dest="height",
+        type=int,
+        default=None,
+        help="height in inches",
+        required=False,
+    )
+    parser.add_argument(
+        "--dpi",
+        dest="dpi",
+        type=int,
+        default=None,
+        help="dots per inch",
+        required=False,
+    )
     args = vars(parser.parse_args())
     print(json.dumps(args))
 
@@ -120,7 +144,16 @@ def main():
         data={"dates": series[0], "cases": series[1], "deaths": series[2]}
     )
 
-    fig = plt.figure()
+    # display size
+    if args["inches"]:
+        x_inches, y_inches = args["inches"].split("x")
+        fig = plt.figure(figsize=(int(x_inches), int(y_inches)))
+    else:
+        fig = plt.figure()
+
+    if args["dpi"]:
+        fig.set_dpi(args["dpi"])
+
     ax = fig.add_subplot(1, 1, 1)
 
     # X axis is a date
