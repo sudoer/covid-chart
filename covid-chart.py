@@ -51,6 +51,14 @@ def main():
         required=False,
     )
     parser.add_argument(
+        "--deaths",
+        dest="deaths",
+        action="store_true",
+        default=False,
+        help="graph deaths rather than cases",
+        required=False,
+    )
+    parser.add_argument(
         "--country",
         dest="country",
         default="US",
@@ -111,7 +119,6 @@ def main():
     df = pandas.DataFrame(
         data={"dates": series[0], "cases": series[1], "deaths": series[2]}
     )
-    df.diff = df.cases.diff()
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
@@ -131,8 +138,10 @@ def main():
     ax.xaxis.set_major_formatter(fmt_mmdd)
 
     series = df.cases
+    if args["deaths"]:
+        series = df.deaths
     if args["new"]:
-        series = df.diff
+        series = series.diff()
 
     plt.plot_date(
         df.dates,
@@ -156,7 +165,11 @@ def main():
             color="orange",
         )
 
-    title = "%s %s cases" % (location, "new" if args["new"] else "cumulative")
+    title = "%s %s %s" % (
+        location,
+        "new" if args["new"] else "cumulative",
+        "deaths" if args["deaths"] else "cases",
+    )
     if args["avg"]:
         title = title + " (%s-day average)" % args["avg"]
     ax.set_title(title)
