@@ -156,7 +156,7 @@ def main():
 
     title = "%s %s cases" % (location, "new" if args["new"] else "cumulative",)
     if args["avg"]:
-        title = title + " (%s moving average)" % args["avg"]
+        title = title + " (%s-day average)" % args["avg"]
     ax.set_title(title)
     ylabel = "%s cases" % ("new" if args["new"] else "cumulative")
     ax.set_ylabel(ylabel)
