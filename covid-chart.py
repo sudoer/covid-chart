@@ -159,11 +159,11 @@ def main():
 
 def get_location(country, state, county=None):
     if county:
-        location = "%s county, %s (%s)" % (county, state, country)
+        location = "%s, %s (%s)" % (county, state, country)
     elif state:
         location = "%s (%s)" % (state, country)
     else:
-        location = "%s (all states)" % country
+        location = "%s (all)" % country
     return location
 
 
