@@ -106,8 +106,6 @@ def main():
     else:
         raise Exception("unknown source '%s'", args['source'])
 
-    # Remove today's partial-day numbers.
-    triplets.pop(-1)
     series = list(zip(*triplets))
 
     df = pandas.DataFrame(data={"dates": series[0], "cases": series[1], "deaths": series[2]})
@@ -163,13 +161,15 @@ def main():
     ylabel = "%s cases" % ("new" if args["new"] else "cumulative")
     ax.set_ylabel(ylabel)
 
-    # dateutil.parser can handle any conventional date/time format without us telling it what to expect
+    # By default, start with the first recorded data.
     xmin = min(df.dates)
     if args["start-date"]:
         xmin = dateutil.parser.parse(args["start-date"])
-    xmax = max(df.dates)
+    # By default, stop with yesterday's data (today's data is partial).
+    xmax = max(df.dates) + datetime.timedelta(days=1)
     if args["end-date"]:
         xmax = dateutil.parser.parse(args["end-date"])
+
     ax.set_xlim([xmin, xmax])
 
     ylim = ax.get_ylim()
