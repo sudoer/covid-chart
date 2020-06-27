@@ -122,36 +122,76 @@ def main():
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
-    if args["log"]:
-        ax.set_yscale("log")
 
-    # And a corresponding grid
-    ax.grid(which="both")
-
-    # Or if you want different settings for the grids:
-    ax.grid(which="minor", alpha=0.2)
-    ax.grid(which="major", alpha=0.5)
-
-    # format axis labels
+    # X axis is a date
+    ax.xaxis_date()
+    # X axis labels
     plt.xticks(rotation=45)
     fmt_mmdd = matplotlib.dates.DateFormatter("%m/%d")
     ax.xaxis.set_major_formatter(fmt_mmdd)
 
+    # Y axis can be linear or logarithmic
+    if args["log"]:
+        ax.set_yscale("log")
+
+    # And a corresponding grid
+    ## ax.grid(which="both")
+    ax.grid(which="minor", alpha=0.2)
+    ax.grid(which="major", alpha=0.5)
+
+    # Which data do we graph
     series = df.cases
     if args["deaths"]:
         series = df.deaths
     if args["new"]:
         series = series.diff()
 
-    plt.plot_date(
-        df.dates,
-        series,
-        xdate=True,
-        ydate=False,
-        label="%s cases" % "new" if args["new"] else "cumulative",
-        marker=".",
-        color="blue",
+    # Colors
+    series_color = "blue"
+    avg_color = "orange"
+    if args["deaths"]:
+        series_color = "darkred"
+        avg_color = "black"
+
+    # Title and labels
+    series_label = "%s %s" % (
+        "new" if args["new"] else "cumulative",
+        "deaths" if args["deaths"] else "cases",
     )
+    title = "%s %s" % (location, series_label)
+    if args["avg"]:
+        title = title + " (%s-day average)" % args["avg"]
+    ax.set_title(title)
+    ax.set_ylabel(series_label)
+
+    # Charts of NEW cases/deaths should be bar charts.
+    # It emphasizes the volume under the curve.
+    bar_chart = False
+    if args["new"]:
+        bar_chart = True
+    if args["log"]:
+        bar_chart = False
+
+    if bar_chart:
+        plt.bar(
+            df.dates,
+            series,
+            width=0.8,
+            bottom=None,
+            align="center",
+            label=series_label,
+            color=series_color,
+        )
+    else:
+        plt.plot_date(
+            df.dates,
+            series,
+            xdate=True,
+            ydate=False,
+            label=series_label,
+            marker=".",
+            color=series_color,
+        )
     if args["avg"]:
         plt.plot_date(
             df.dates,
@@ -162,20 +202,10 @@ def main():
             marker=None,
             linestyle="solid",
             linewidth=2,
-            color="orange",
+            color=avg_color,
         )
 
-    title = "%s %s %s" % (
-        location,
-        "new" if args["new"] else "cumulative",
-        "deaths" if args["deaths"] else "cases",
-    )
-    if args["avg"]:
-        title = title + " (%s-day average)" % args["avg"]
-    ax.set_title(title)
-    ylabel = "%s cases" % ("new" if args["new"] else "cumulative")
-    ax.set_ylabel(ylabel)
-
+    # X limits
     # By default, start with the first recorded data.
     xmin = min(df.dates)
     if args["start-date"]:
@@ -184,9 +214,9 @@ def main():
     xmax = max(df.dates) + datetime.timedelta(days=1)
     if args["end-date"]:
         xmax = dateutil.parser.parse(args["end-date"])
-
     ax.set_xlim([xmin, xmax])
 
+    # Y limits
     ylim = ax.get_ylim()
     ax.set_ylim([0, ylim[1]])
 
