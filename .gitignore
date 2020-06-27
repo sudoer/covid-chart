@@ -1,8 +1,7 @@
 # local excludes
-get
-out*
 .idea
-
+old
+COVID-19
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
