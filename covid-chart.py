@@ -81,18 +81,21 @@ def main():
     print(json.dumps(args))
 
     if args["source"] == "wake":
-        pairs = get_wake_data()
+        triplets = get_wake_data()
         location = "Wake County"
-    if args["source"] == "jhu":
+    elif args["source"] == "jhu":
         location = get_location(args["country"], args["state"], args["county"])
-        pairs = get_jhu_data(
+        triplets = get_jhu_data(
             args["jhu-data-dir"], args["country"], args["state"], args["county"]
         )
-    # Remove today's partial-day numbers.
-    pairs.pop(-1)
-    series = list(zip(*pairs))
+    else:
+        raise Exception("unknown source '%s'", args['source'])
 
-    df = pandas.DataFrame(data={"dates": series[0], "cases": series[1],})
+    # Remove today's partial-day numbers.
+    triplets.pop(-1)
+    series = list(zip(*triplets))
+
+    df = pandas.DataFrame(data={"dates": series[0], "cases": series[1], "deaths": series[2]})
     df.diff = df.cases.diff()
 
     fig = plt.figure()
@@ -164,54 +167,83 @@ def get_location(country, state, county=None):
     return location
 
 
-def get_jhu_data(git_root, country, state, county=None):
+def get_jhu_data(git_root, filter_country, filter_state, filter_county=None):
+
+    dir_name = git_root + "/csse_covid_19_data/csse_covid_19_daily_reports"
+
+    # Formats vary by date:
+
+    # COVID-19/csse_covid_19_data/csse_covid_19_daily_reports/02-10-2020.csv
+    # Province/State,Country/Region,Last Update,Confirmed,Deaths,Recovered
+    # "Chicago, IL",US,2020-02-09T19:03:03,2,0,2
+    # "San Benito, CA",US,2020-02-03T03:53:02,2,0,0
+
+    # COVID-19/csse_covid_19_data/csse_covid_19_daily_reports/03-10-2020.csv
+    # Province/State,Country/Region,Last Update,Confirmed,Deaths,Recovered,Latitude,Longitude
+    # Washington,US,2020-03-10T22:13:11,267,23,1,47.4009,-121.4905
+    # New York,US,2020-03-10T17:13:27,173,0,0,42.1657,-74.9481
+
+    # COVID-19/csse_covid_19_data/csse_covid_19_daily_reports/04-10-2020.csv
+    # FIPS,Admin2,Province_State,Country_Region,Last_Update,Lat,Long_,Confirmed,Deaths,Recovered,Active,Combined_Key
+    # 45001,Abbeville,South Carolina,US,2020-04-10 22:54:07,34.22333378,-82.46170658,7,0,0,0,"Abbeville, South Carolina, US"
+    # 22001,Acadia,Louisiana,US,2020-04-10 22:54:07,30.295064899999996,-92.41419698,94,4,0,0,"Acadia, Louisiana, US"
+
+
+    # FIPS,Admin2,Province_State,Country_Region,Last_Update,Lat,Long_,Confirmed,Deaths,Recovered,Active,Combined_Key,Incidence_Rate,Case-Fatality_Ratio
+    # 45001,Abbeville,South Carolina,US,2020-06-22 04:33:20,34.22333378,-82.46170658,88,0,0,88,"Abbeville, South Carolina, US",358.78827414685856,0.0
+
+    country_col = ["Country/Region", "Country_Region"]
+    state_col = ["Province/State", "Province_State"]
+    county_col = ["Admin2"]
+    cases_col = ["Confirmed"]
+    deaths_col = ["Deaths"]
+
+    def get_val_by_column_names(row, col_names, number=False):
+        for col_name in col_names:
+            if col_name in row:
+                val = row[col_name]
+                if number:
+                    try:
+                        val = int(val)
+                    except ValueError:
+                        val = 0
+                return val
+        if number:
+            return 0
+        return None
+
     results = []
-    if county:
-        # COUNTY LEVEL data
-        dir_name = git_root + "/csse_covid_19_data/csse_covid_19_daily_reports"
-        # FIPS,Admin2,Province_State,Country_Region,Last_Update,Lat,Long_,Confirmed,Deaths,Recovered,Active,Combined_Key,Incidence_Rate,Case-Fatality_Ratio
-        # 45001,Abbeville,South Carolina,US,2020-06-22 04:33:20,34.22333378,-82.46170658,88,0,0,88,"Abbeville, South Carolina, US",358.78827414685856,0.0
-        country_col = 3
-        state_col = 2
-        county_col = 1
-        case_col = 7
-    else:
-        # STATE and COUNTRY LEVEL data
-        dir_name = git_root + "/csse_covid_19_data/csse_covid_19_daily_reports_us"
-        # Province_State,Country_Region,Last_Update,Lat,Long_,Confirmed,Deaths,Recovered,Active,FIPS,Incident_Rate,People_Tested,People_Hospitalized,Mortality_Rate,UID,ISO3,Testing_Rate,Hospitalization_Rate
-        # Alabama,US,2020-06-22 04:33:33,32.3182,-86.9023,30021,839,15974,13208.0,1,612.2754903190478,344678,2460,2.794710369408081,84000001,USA,7029.675608813455,8.194264015189367
-        country_col = 1
-        state_col = 0
-        county_col = None
-        case_col = 5
     for file_name in sorted(os.listdir(dir_name)):
         if file_name.endswith(".csv"):
             date = datetime.datetime.strptime(file_name.split(".")[0], "%m-%d-%Y")
             total_cases = 0
+            total_deaths = 0
             csv_filename = os.path.join(dir_name, file_name)
-            with open(csv_filename) as csvfile:
-                reader = csv.reader(csvfile)
-                for row in reader:
+            with open(csv_filename) as csv_file_obj:
 
-                    if row[country_col] != country:
+                csv_dict_reader = csv.DictReader(csv_file_obj)
+                for row in csv_dict_reader:
+
+                    csv_country = get_val_by_column_names(row, country_col)
+                    csv_state = get_val_by_column_names(row, state_col)
+                    csv_county = get_val_by_column_names(row, county_col)
+                    csv_cases = get_val_by_column_names(row, cases_col, number=True)
+                    csv_deaths = get_val_by_column_names(row, deaths_col, number=True)
+
+                    if csv_country is not None and csv_country != filter_country:
                         continue
 
-                    if state is None:
-                        total_cases += int(row[case_col])
-                        continue
-                    elif row[state_col] != state:
-                        continue
-                    else:
-                        # state was given and it matches
-                        pass
-
-                    if county is not None and row[county_col] != county:
+                    if filter_state is not None and csv_state != filter_state:
                         continue
 
-                    results.append([date, int(row[case_col])])
+                    if filter_county is not None and csv_county != filter_county:
+                        continue
 
-            if state is None:
-                results.append([date, total_cases])
+                    total_cases += int(csv_cases)
+                    total_deaths += int(csv_deaths)
+
+            if total_cases or total_deaths:
+                results.append([date, total_cases, total_deaths])
 
     return results
 
