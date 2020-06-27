@@ -104,11 +104,13 @@ def main():
             args["jhu-data-dir"], args["country"], args["state"], args["county"]
         )
     else:
-        raise Exception("unknown source '%s'", args['source'])
+        raise Exception("unknown source '%s'", args["source"])
 
     series = list(zip(*triplets))
 
-    df = pandas.DataFrame(data={"dates": series[0], "cases": series[1], "deaths": series[2]})
+    df = pandas.DataFrame(
+        data={"dates": series[0], "cases": series[1], "deaths": series[2]}
+    )
     df.diff = df.cases.diff()
 
     fig = plt.figure()
@@ -154,7 +156,7 @@ def main():
             color="orange",
         )
 
-    title = "%s %s cases" % (location, "new" if args["new"] else "cumulative",)
+    title = "%s %s cases" % (location, "new" if args["new"] else "cumulative")
     if args["avg"]:
         title = title + " (%s-day average)" % args["avg"]
     ax.set_title(title)
@@ -211,7 +213,6 @@ def get_jhu_data(git_root, filter_country, filter_state, filter_county=None):
     # FIPS,Admin2,Province_State,Country_Region,Last_Update,Lat,Long_,Confirmed,Deaths,Recovered,Active,Combined_Key
     # 45001,Abbeville,South Carolina,US,2020-04-10 22:54:07,34.22333378,-82.46170658,7,0,0,0,"Abbeville, South Carolina, US"
     # 22001,Acadia,Louisiana,US,2020-04-10 22:54:07,30.295064899999996,-92.41419698,94,4,0,0,"Acadia, Louisiana, US"
-
 
     # FIPS,Admin2,Province_State,Country_Region,Last_Update,Lat,Long_,Confirmed,Deaths,Recovered,Active,Combined_Key,Incidence_Rate,Case-Fatality_Ratio
     # 45001,Abbeville,South Carolina,US,2020-06-22 04:33:20,34.22333378,-82.46170658,88,0,0,88,"Abbeville, South Carolina, US",358.78827414685856,0.0
@@ -278,7 +279,7 @@ def get_wake_data():
     # I am pretty sure it could be trimmed a bit... it looks like overkill.
     rsp = requests.post(
         "https://wabi-us-gov-virginia-api.analysis.usgovcloudapi.net/public/reports/querydata",
-        params={"synchronous": True,},
+        params={"synchronous": True},
         headers={
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:76.0) Gecko/20100101 Firefox/76.0",
             "Accept": "application/json, text/plain, */*",
