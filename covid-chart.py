@@ -252,8 +252,8 @@ def main():
     start_date = min(df.dates)
     if args["start-date"]:
         start_date = parse_date(args["start-date"])
-    # By default, stop with next-to-last date data (last data point is usually partial).
-    end_date = max(df.dates) + datetime.timedelta(days=1)
+    # By default, stop with yesterday's data (last data point is usually partial).
+    end_date = parse_date("yesterday")
     if args["end-date"]:
         end_date = parse_date(args["end-date"])
     ax.set_xlim([start_date, end_date])
@@ -292,11 +292,11 @@ def summary(df, country, state, county, date):
 
 def parse_date(date_string):
     if date_string.lower() == "today":
-        return datetime.date.today()
+        return datetime.datetime.now()
     if date_string.lower() == "yesterday":
-        return datetime.date.today() - datetime.timedelta(days=1)
+        return datetime.datetime.now() - datetime.timedelta(days=1)
     if date_string.lower() == "tomorrow":
-        return datetime.date.today() + datetime.timedelta(days=1)
+        return datetime.datetime.now() + datetime.timedelta(days=1)
     return dateutil.parser.parse(date_string)
 
 
