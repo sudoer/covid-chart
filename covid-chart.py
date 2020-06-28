@@ -3,13 +3,12 @@
 import argparse
 import csv
 import datetime
-import json
-import requests
+import dateutil.parser
 import matplotlib.pyplot as plt
 import matplotlib.dates
 import os
 import pandas
-import dateutil.parser
+import sys
 import tkinter as tk  # sudo apt-get install python3-tk
 
 
@@ -140,7 +139,10 @@ def main():
             args["jhu-data-dir"], args["country"], args["state"], args["county"]
         )
     else:
-        raise Exception("unknown source '%s'", args["source"])
+        exit_on_error("unknown source '%s'", args["source"])
+
+    if not triplets:
+        exit_on_error('no data matching criteria')
 
     series = list(zip(*triplets))
 
@@ -268,6 +270,11 @@ def main():
         plt.savefig(args["out"])
     else:
         plt.show()
+
+
+def exit_on_error(string):
+    print(string)
+    sys.exit(1)
 
 
 def get_location(country, state, county=None):
