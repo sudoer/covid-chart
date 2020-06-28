@@ -61,7 +61,7 @@ def main():
     parser.add_argument(
         "--country",
         dest="country",
-        default="US",
+        default=None,
         help="country (JHU data only)",
         required=False,
     )
@@ -362,7 +362,7 @@ def get_jhu_data(git_root, filter_country, filter_state, filter_county=None):
                     csv_cases = get_val_by_column_names(row, cases_col, number=True)
                     csv_deaths = get_val_by_column_names(row, deaths_col, number=True)
 
-                    if csv_country is not None and csv_country != filter_country:
+                    if filter_country is not None and csv_country != filter_country:
                         continue
 
                     if filter_state is not None and csv_state != filter_state:
