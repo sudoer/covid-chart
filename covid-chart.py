@@ -20,7 +20,7 @@ def main():
         "--avg",
         dest="avg",
         type=int,
-        default=7,
+        default=None,
         help="size of sliding average",
         required=False,
     )
@@ -176,6 +176,11 @@ def main():
     if args["new"]:
         series = series.diff()
 
+    # Show moving average if we're looking at NEW cases/deaths.
+    moving_average = args["avg"]
+    if moving_average is None and args["new"]:
+        moving_average = 7
+
     # Colors
     series_color = "blue"
     avg_color = "orange"
@@ -189,8 +194,8 @@ def main():
         "deaths" if args["deaths"] else "cases",
     )
     title = "%s %s" % (location, series_label)
-    if args["avg"]:
-        title = title + " (%s-day average)" % args["avg"]
+    if moving_average:
+        title = title + " (%s-day average)" % moving_average
     ax.set_title(title)
     ax.set_ylabel(series_label)
 
@@ -222,13 +227,13 @@ def main():
             marker=".",
             color=series_color,
         )
-    if args["avg"]:
+    if moving_average:
         plt.plot_date(
             df.dates,
-            series.rolling(window=args["avg"]).mean(),
+            series.rolling(window=moving_average).mean(),
             xdate=True,
             ydate=False,
-            label="%d-day average" % args["avg"],
+            label="%d-day average" % moving_average,
             marker=None,
             linestyle="solid",
             linewidth=2,
