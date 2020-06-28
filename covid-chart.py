@@ -249,21 +249,21 @@ def main():
 
     # X limits
     # By default, start with the first recorded data.
-    xmin = min(df.dates)
+    start_date = min(df.dates)
     if args["start-date"]:
-        xmin = parse_date(args["start-date"])
+        start_date = parse_date(args["start-date"])
     # By default, stop with next-to-last date data (last data point is usually partial).
-    xmax = max(df.dates) + datetime.timedelta(days=1)
+    end_date = max(df.dates) + datetime.timedelta(days=1)
     if args["end-date"]:
-        xmax = parse_date(args["end-date"])
-    ax.set_xlim([xmin, xmax])
+        end_date = parse_date(args["end-date"])
+    ax.set_xlim([start_date, end_date])
 
     # Y limits
     ylim = ax.get_ylim()
     ax.set_ylim([0, ylim[1]])
 
     if args["summary"]:
-        summary(df, args["country"], args["state"], args["county"])
+        summary(df, args["country"], args["state"], args["county"], end_date)
     elif args["out"]:
         plt.savefig(args["out"])
     else:
@@ -280,13 +280,14 @@ def get_location(country, state, county=None):
     return location
 
 
-def summary(df, country, state, county):
+def summary(df, country, state, county, date):
     print("country: %s" % country)
     print("state: %s" % state)
     print("county: %s" % county)
-    print("date: %s" % max(df.dates).strftime("%Y-%m-%d"))
-    print("cases: %s" % df.cases.iat[-1])
-    print("deaths: %s" % df.deaths.iat[-1])
+    data = df[df.dates <= date]
+    print("date: %s" % data.dates.iat[-1].strftime("%Y-%m-%d"))
+    print("cases: %s" % data.cases.iat[-1])
+    print("deaths: %s" % data.deaths.iat[-1])
 
 
 def parse_date(date_string):
