@@ -94,6 +94,14 @@ def main():
         required=False,
     )
     parser.add_argument(
+        "--summary",
+        dest="summary",
+        default=False,
+        action="store_true",
+        help="print summary of latest information to stdout",
+        required=False,
+    )
+    parser.add_argument(
         "--out",
         dest="out",
         default=None,
@@ -125,7 +133,6 @@ def main():
         required=False,
     )
     args = vars(parser.parse_args())
-    print(json.dumps(args))
 
     if args["source"] == "jhu":
         location = get_location(args["country"], args["state"], args["county"])
@@ -244,18 +251,20 @@ def main():
     # By default, start with the first recorded data.
     xmin = min(df.dates)
     if args["start-date"]:
-        xmin = dateutil.parser.parse(args["start-date"])
-    # By default, stop with yesterday's data (today's data is partial).
+        xmin = parse_date(args["start-date"])
+    # By default, stop with next-to-last date data (last data point is usually partial).
     xmax = max(df.dates) + datetime.timedelta(days=1)
     if args["end-date"]:
-        xmax = dateutil.parser.parse(args["end-date"])
+        xmax = parse_date(args["end-date"])
     ax.set_xlim([xmin, xmax])
 
     # Y limits
     ylim = ax.get_ylim()
     ax.set_ylim([0, ylim[1]])
 
-    if args["out"]:
+    if args["summary"]:
+        summary(df, args["country"], args["state"], args["county"])
+    elif args["out"]:
         plt.savefig(args["out"])
     else:
         plt.show()
@@ -269,6 +278,25 @@ def get_location(country, state, county=None):
     else:
         location = "%s (all)" % country
     return location
+
+
+def summary(df, country, state, county):
+    print("country: %s" % country)
+    print("state: %s" % state)
+    print("county: %s" % county)
+    print("date: %s" % max(df.dates).strftime("%Y-%m-%d"))
+    print("cases: %s" % df.cases.iat[-1])
+    print("deaths: %s" % df.deaths.iat[-1])
+
+
+def parse_date(date_string):
+    if date_string.lower() == "today":
+        return datetime.date.today()
+    if date_string.lower() == "yesterday":
+        return datetime.date.today() - datetime.timedelta(days=1)
+    if date_string.lower() == "tomorrow":
+        return datetime.date.today() + datetime.timedelta(days=1)
+    return dateutil.parser.parse(date_string)
 
 
 def get_jhu_data(git_root, filter_country, filter_state, filter_county=None):
