@@ -103,6 +103,14 @@ def main():
         required=False,
     )
     parser.add_argument(
+        "--locations",
+        dest="locations",
+        default=False,
+        action="store_true",
+        help="print list of valid combinations of country, state, county",
+        required=False,
+    )
+    parser.add_argument(
         "--out",
         dest="out",
         default=None,
@@ -140,7 +148,7 @@ def main():
         location = "Wake County"
     elif args["source"] == "jhu":
         location = get_location(args["country"], args["state"], args["county"])
-        triplets = get_jhu_data(
+        triplets, locations = get_jhu_data(
             args["jhu-data-dir"], args["country"], args["state"], args["county"]
         )
     else:
@@ -271,6 +279,9 @@ def main():
 
     if args["summary"]:
         summary(df, args["country"], args["state"], args["county"], end_date)
+    elif args["locations"]:
+        for location in locations:
+            print("%s; %s; %s" % location)
     elif args["out"]:
         plt.savefig(args["out"])
     else:
@@ -357,6 +368,7 @@ def get_jhu_data(git_root, filter_country, filter_state, filter_county=None):
         return None
 
     results = []
+    locations = set()
     for file_name in sorted(os.listdir(dir_name)):
         if file_name.endswith(".csv"):
             date = datetime.datetime.strptime(file_name.split(".")[0], "%m-%d-%Y")
@@ -374,6 +386,10 @@ def get_jhu_data(git_root, filter_country, filter_state, filter_county=None):
                     csv_cases = get_val_by_column_names(row, cases_col, number=True)
                     csv_deaths = get_val_by_column_names(row, deaths_col, number=True)
 
+                    locations.add(
+                        (csv_country or "", csv_state or "", csv_county or "")
+                    )
+
                     if filter_country is not None and csv_country != filter_country:
                         continue
 
@@ -389,7 +405,7 @@ def get_jhu_data(git_root, filter_country, filter_state, filter_county=None):
             if total_cases or total_deaths:
                 results.append([date, total_cases, total_deaths])
 
-    return results
+    return results, locations
 
 
 def get_wake_data():
