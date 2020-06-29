@@ -147,7 +147,7 @@ def main():
         exit_on_error("unknown source '%s'", args["source"])
 
     if not triplets:
-        exit_on_error('no data matching criteria')
+        exit_on_error("no data matching criteria")
 
     series = list(zip(*triplets))
 
@@ -427,8 +427,18 @@ def get_wake_data():
                                                 {
                                                     "Name": "c",
                                                     "Entity": "Confirmed Cases",
+                                                    "Type": 0,
                                                 },
-                                                {"Name": "c1", "Entity": "Calendar"},
+                                                {
+                                                    "Name": "c1",
+                                                    "Entity": "Calendar",
+                                                    "Type": 0,
+                                                },
+                                                {
+                                                    "Name": "d",
+                                                    "Entity": "Deaths",
+                                                    "Type": 0,
+                                                },
                                             ],
                                             "Select": [
                                                 {
@@ -438,7 +448,16 @@ def get_wake_data():
                                                         },
                                                         "Property": "Running Total",
                                                     },
-                                                    "Name": "Confirmed Cases.Count of Event ID running total in Specimen Date",
+                                                    "Name": "Confirmed Cases.Running Total",
+                                                },
+                                                {
+                                                    "Measure": {
+                                                        "Expression": {
+                                                            "SourceRef": {"Source": "c"}
+                                                        },
+                                                        "Property": "Total Confirmed Cases",
+                                                    },
+                                                    "Name": "Confirmed Cases.Total Confirmed Cases",
                                                 },
                                                 {
                                                     "Column": {
@@ -450,6 +469,15 @@ def get_wake_data():
                                                         "Property": "Date",
                                                     },
                                                     "Name": "Calendar.Date",
+                                                },
+                                                {
+                                                    "Measure": {
+                                                        "Expression": {
+                                                            "SourceRef": {"Source": "d"}
+                                                        },
+                                                        "Property": "Deaths",
+                                                    },
+                                                    "Name": "Deaths.Deaths",
                                                 },
                                             ],
                                             "OrderBy": [
@@ -470,7 +498,9 @@ def get_wake_data():
                                         },
                                         "Binding": {
                                             "Primary": {
-                                                "Groupings": [{"Projections": [0, 1]}]
+                                                "Groupings": [
+                                                    {"Projections": [0, 1, 2, 3]}
+                                                ]
                                             },
                                             "DataReduction": {
                                                 "DataVolume": 4,
@@ -478,11 +508,12 @@ def get_wake_data():
                                             },
                                             "Version": 1,
                                         },
+                                        "ExecutionMetricsKind": 3,
                                     }
                                 }
                             ]
                         },
-                        "CacheKey": '{"Commands":[{"SemanticQueryDataShapeCommand":{"Query":{"Version":2,"From":[{"Name":"c","Entity":"Confirmed Cases"},{"Name":"c1","Entity":"Calendar"}],"Select":[{"Measure":{"Expression":{"SourceRef":{"Source":"c"}},"Property":"Running Total"},"Name":"Confirmed Cases.Count of Event ID running total in Specimen Date"},{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"},"Name":"Calendar.Date"}],"OrderBy":[{"Direction":1,"Expression":{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"}}}]},"Binding":{"Primary":{"Groupings":[{"Projections":[0,1]}]},"DataReduction":{"DataVolume":4,"Primary":{"Window":{"Count":1000}}},"Version":1}}}]}',
+                        "CacheKey": '{"Commands":[{"SemanticQueryDataShapeCommand":{"Query":{"Version":2,"From":[{"Name":"c","Entity":"Confirmed Cases","Type":0},{"Name":"c1","Entity":"Calendar","Type":0},{"Name":"d","Entity":"Deaths","Type":0}],"Select":[{"Measure":{"Expression":{"SourceRef":{"Source":"c"}},"Property":"Running Total"},"Name":"Confirmed Cases.Running Total"},{"Measure":{"Expression":{"SourceRef":{"Source":"c"}},"Property":"Total Confirmed Cases"},"Name":"Confirmed Cases.Total Confirmed Cases"},{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"},"Name":"Calendar.Date"},{"Measure":{"Expression":{"SourceRef":{"Source":"d"}},"Property":"Deaths"},"Name":"Deaths.Deaths"}],"OrderBy":[{"Direction":1,"Expression":{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"}}}]},"Binding":{"Primary":{"Groupings":[{"Projections":[0,1,2,3]}]},"DataReduction":{"DataVolume":4,"Primary":{"Window":{"Count":1000}}},"Version":1},"ExecutionMetricsKind":3}}]}',
                         "QueryId": "",
                         "ApplicationContext": {
                             "DatasetId": "bd7fc819-b88a-41d0-a830-7a8dac4576ff",
@@ -499,15 +530,17 @@ def get_wake_data():
     )
     raw = json.loads(rsp.content)
     # print(json.dumps(raw))
-    result_set = raw["results"][0]["result"]["data"]["dsr"]["DS"][0]["PH"][0]["DM0"]
-    results = [i["C"] for i in result_set]
-    # print(json.dumps(results))
-    deaths = 0  # TODO: find proper query to return deaths, too
-    return [
-        [datetime.datetime.fromtimestamp(r[0] / 1000), r[1], deaths]
-        for r in results
-        if len(r) == 2
-    ]
+    results1 = raw["results"][0]["result"]["data"]["dsr"]["DS"][0]["PH"][0]["DM0"]
+    results2 = [i["C"] for i in results1]
+    # print(json.dumps(results2))
+    results3 = []
+    for r in results2:
+        date = datetime.datetime.fromtimestamp(r[0] / 1000)
+        cases = r[1] if len(r) > 1 else 0
+        deaths = r[2] if len(r) > 2 else 0
+        if cases or deaths:
+            results3.append([date, cases, deaths])
+    return results3
 
 
 if __name__ == "__main__":
