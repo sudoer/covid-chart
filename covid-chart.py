@@ -280,8 +280,8 @@ def main():
     if args["summary"]:
         summary(df, args["country"], args["state"], args["county"], end_date)
     elif args["locations"]:
-        for location in locations:
-            print("%s; %s; %s" % location)
+        for location_string in sorted(["%s; %s; %s" % loc for loc in locations]):
+            print(location_string)
     elif args["out"]:
         plt.savefig(args["out"])
     else:
