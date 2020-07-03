@@ -9,38 +9,19 @@ import matplotlib.pyplot as plt
 import matplotlib.dates
 import os
 import pandas
+import re
 import requests
 import sys
 import tkinter as tk  # sudo apt-get install python3-tk
+from collections import defaultdict
 
 
 def main():
 
     parser = argparse.ArgumentParser(description="Wake County COVID-19 grapher")
-    parser.add_argument(
-        "--avg",
-        dest="avg",
-        type=int,
-        default=None,
-        help="size of sliding average",
-        required=False,
-    )
-    parser.add_argument(
-        "--log",
-        dest="log",
-        action="store_true",
-        default=False,
-        help="logarithmic scale",
-        required=False,
-    )
-    parser.add_argument(
-        "--new",
-        dest="new",
-        action="store_true",
-        default=False,
-        help="new cases",
-        required=False,
-    )
+
+    # DATA SOURCE OPTIONS
+
     parser.add_argument(
         "--source", dest="source", default="jhu", help="jhu or wake", required=False
     )
@@ -49,6 +30,17 @@ def main():
         dest="jhu-data-dir",
         default="COVID-19",
         help="name of JHU git directory",
+        required=False,
+    )
+
+    # DATA SELECTION OPTIONS
+
+    parser.add_argument(
+        "--new",
+        dest="new",
+        action="store_true",
+        default=False,
+        help="new cases",
         required=False,
     )
     parser.add_argument(
@@ -94,6 +86,28 @@ def main():
         help="start-date (YYYY-MM-DD)",
         required=False,
     )
+
+    # CHART OPTIONS
+
+    parser.add_argument(
+        "--avg",
+        dest="avg",
+        type=int,
+        default=None,
+        help="size of sliding average",
+        required=False,
+    )
+    parser.add_argument(
+        "--log",
+        dest="log",
+        action="store_true",
+        default=False,
+        help="logarithmic scale",
+        required=False,
+    )
+
+    # OUTPUT OPTIONS
+
     parser.add_argument(
         "--summary",
         dest="summary",
@@ -111,26 +125,29 @@ def main():
         required=False,
     )
     parser.add_argument(
+        "--bulk",
+        dest="bulk",
+        action="store_true",
+        default=False,
+        help="output option: save all data as PNGs using default filenames",
+        required=False,
+    )
+    parser.add_argument(
         "--out",
         dest="out",
         default=None,
-        help="save to file instead of opening window",
+        help="output option: save one graph to file with this filename",
         required=False,
     )
+
+    # IMAGE FORMATTING OPTIONS
+
     parser.add_argument(
         "--inches",
         dest="inches",
         type=str,
         default=None,
         help="size in inches (WWxHH)",
-        required=False,
-    )
-    parser.add_argument(
-        "--height",
-        dest="height",
-        type=int,
-        default=None,
-        help="height in inches",
         required=False,
     )
     parser.add_argument(
@@ -143,35 +160,135 @@ def main():
     )
     args = vars(parser.parse_args())
 
-    if args["source"] == "wake":
+    all_loc_data = None
+    location_key = None
+    source = args.pop("source")
+    if source == "wake":
         triplets = get_wake_data()
-        location = "Wake County"
-    elif args["source"] == "jhu":
-        location = get_location(args["country"], args["state"], args["county"])
-        triplets, locations = get_jhu_data(
-            args["jhu-data-dir"], args["country"], args["state"], args["county"]
-        )
+        location_key = get_location_key("US", "North Carolina", "Wake")
+    elif source == "jhu":
+        # We'll set location_key here, assuming we're going to make a single chart.
+        location_key = get_location_key(args["country"], args["state"], args["county"])
+        all_loc_data = get_jhu_data(args.pop("jhu-data-dir"))
     else:
-        exit_on_error("unknown source '%s'", args["source"])
+        exit_on_error("unknown source '%s'" % source)
 
-    if not triplets:
-        exit_on_error("no data matching criteria")
+    new = args.pop("new")
+    deaths = args.pop("deaths")
+    out = args.pop("out")
+    country_filter = args.pop("country")
+    state_filter = args.pop("state")
+    county_filter = args.pop("county")
 
-    series = list(zip(*triplets))
+    if args.pop("summary"):
+        summary(all_loc_data, location_key, args["end-date"])
+    elif args.pop("locations"):
+        for location_string in sorted(
+            ["%s;%s;%s" % loc for loc in all_loc_data.keys()]
+        ):
+            print(location_string)
+    elif args.pop("bulk"):
+        filtered_index = 0
+        all_locations = all_loc_data.keys()
+        for unfiltered_index, location_key in enumerate(all_locations, 1):
+            country, state, county = location_key
+            if country_filter and country != country_filter:
+                continue
+            if state_filter and state != state_filter:
+                continue
+            if county_filter and county != county_filter:
+                continue
+            filtered_index += 1
+            prefix = "#%d (file %d of %d) " % (filtered_index, unfiltered_index, len(all_locations))
+            generate_chart(
+                all_loc_data, location_key, True, True, args, out, bulk=True, prefix=prefix
+            )
+            generate_chart(
+                all_loc_data, location_key, True, False, args, out, bulk=True, prefix=prefix
+            )
+            generate_chart(
+                all_loc_data, location_key, False, True, args, out, bulk=True, prefix=prefix
+            )
+            generate_chart(
+                all_loc_data, location_key, False, False, args, out, bulk=True, prefix=prefix
+            )
+    else:
+        generate_chart(all_loc_data, location_key, new, deaths, args, out)
 
-    df = pandas.DataFrame(
-        data={"dates": series[0], "cases": series[1], "deaths": series[2]}
+
+def get_location_string(country, state, county):
+    if county:
+        location_string = "%s, %s (%s)" % (county, state, country)
+    elif state:
+        location_string = "%s (%s)" % (state, country)
+    else:
+        location_string = "%s (all)" % country
+    return location_string
+
+
+def get_location_key(country, state, county):
+    return country or "", state or "", county or ""
+
+
+def build_filename(country, state, county, new, deaths):
+    filename = "%s-%s.png" % (
+        "new" if new else "cumulative",
+        "deaths" if deaths else "cases",
+    )
+    country = re.sub("[^0-9a-zA-Z]+", "_", (country or "").lower())
+    state = re.sub("[^0-9a-zA-Z]+", "_", (state or "").lower())
+    county = re.sub("[^0-9a-zA-Z]+", "_", (county or "").lower())
+    return "/".join(
+        [x.strip("_") for x in filter(None, (country, state, county, filename))]
     )
 
+
+def get_location_dataframe(datadict, location_index):
+    location_data = datadict.get(location_index)
+    if not location_data:
+        return None
+    return pandas.DataFrame(
+        data={
+            "dates": [date for date in location_data],
+            "cases": [location_data[date]["cases"] for date in location_data],
+            "deaths": [location_data[date]["deaths"] for date in location_data],
+        }
+    )
+
+
+def summary(datadict, location_key, end_date_str):
+    country, state, county = location_key
+    print("country: %s" % (country or "ALL"))
+    print("state: %s" % (state or "ALL"))
+    print("county: %s" % (county or "ALL"))
+    df = get_location_dataframe(datadict, location_key)
+    if df is None:
+        print("no matching data")
+        return
+    end_date = parse_date("yesterday")
+    if end_date_str:
+        end_date = parse_date(end_date_str)
+    data = df[df.dates <= end_date]
+    print("date: %s" % data.dates.iat[-1].strftime("%Y-%m-%d"))
+    print("cases: %s" % data.cases.iat[-1])
+    print("deaths: %s" % data.deaths.iat[-1])
+
+
+def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=False, prefix=""):
+
+    df = get_location_dataframe(datadict, location_key)
+    if df is None:
+        return False
+
     # display size
-    if args["inches"]:
-        x_inches, y_inches = args["inches"].split("x")
+    if format_opts["inches"]:
+        x_inches, y_inches = format_opts["inches"].split("x")
         fig = plt.figure(figsize=(int(x_inches), int(y_inches)))
     else:
         fig = plt.figure()
 
-    if args["dpi"]:
-        fig.set_dpi(args["dpi"])
+    if format_opts["dpi"]:
+        fig.set_dpi(format_opts["dpi"])
 
     ax = fig.add_subplot(1, 1, 1)
 
@@ -183,7 +300,7 @@ def main():
     ax.xaxis.set_major_formatter(fmt_mmdd)
 
     # Y axis can be linear or logarithmic
-    if args["log"]:
+    if format_opts["log"]:
         ax.set_yscale("log")
 
     # And a corresponding grid
@@ -193,29 +310,29 @@ def main():
 
     # Which data do we graph
     series = df.cases
-    if args["deaths"]:
+    if deaths:
         series = df.deaths
-    if args["new"]:
+    if new:
         series = series.diff()
 
     # Show moving average if we're looking at NEW cases/deaths.
-    moving_average = args["avg"]
-    if moving_average is None and args["new"]:
+    moving_average = format_opts["avg"]
+    if moving_average is None and new:
         moving_average = 7
 
     # Colors
     series_color = "blue"
     avg_color = "orange"
-    if args["deaths"]:
+    if deaths:
         series_color = "darkred"
         avg_color = "black"
 
     # Title and labels
     series_label = "%s %s" % (
-        "new" if args["new"] else "cumulative",
-        "deaths" if args["deaths"] else "cases",
+        "new" if new else "cumulative",
+        "deaths" if deaths else "cases",
     )
-    title = "%s %s" % (location, series_label)
+    title = "%s %s" % (get_location_string(*location_key), series_label)
     if moving_average:
         title = title + " (%s-day average)" % moving_average
     ax.set_title(title)
@@ -224,9 +341,9 @@ def main():
     # Charts of NEW cases/deaths should be bar charts.
     # It emphasizes the volume under the curve.
     bar_chart = False
-    if args["new"]:
+    if new:
         bar_chart = True
-    if args["log"]:
+    if format_opts["log"]:
         bar_chart = False
 
     if bar_chart:
@@ -265,52 +382,38 @@ def main():
     # X limits
     # By default, start with the first recorded data.
     start_date = min(df.dates)
-    if args["start-date"]:
-        start_date = parse_date(args["start-date"])
+    if format_opts["start-date"]:
+        start_date = parse_date(format_opts["start-date"])
     # By default, stop with yesterday's data (last data point is usually partial).
     end_date = parse_date("yesterday")
-    if args["end-date"]:
-        end_date = parse_date(args["end-date"])
+    if format_opts["end-date"]:
+        end_date = parse_date(format_opts["end-date"])
     ax.set_xlim([start_date, end_date])
 
     # Y limits
     ylim = ax.get_ylim()
     ax.set_ylim([0, ylim[1]])
 
-    if args["summary"]:
-        summary(df, args["country"], args["state"], args["county"], end_date)
-    elif args["locations"]:
-        for location_string in sorted(["%s;%s;%s" % loc for loc in locations]):
-            print(location_string)
-    elif args["out"]:
-        plt.savefig(args["out"])
-    else:
+    if bulk:
+        filename = build_filename(*location_key, new, deaths)
+        if out:
+            filename = "%s/%s" % (out, filename)
+        dirname = os.path.dirname(filename)
+        os.makedirs(dirname, exist_ok=True)
+        print("%ssaving %s" % (prefix, filename))
+        plt.savefig(filename)
+    elif not out:
+        print("showing chart: %s" % title)
         plt.show()
+    else:
+        print("saving %s" % out)
+        plt.savefig(out)
+    plt.close("all")
 
 
 def exit_on_error(string):
     print(string)
     sys.exit(1)
-
-
-def get_location(country, state, county=None):
-    if county:
-        location = "%s, %s (%s)" % (county, state, country)
-    elif state:
-        location = "%s (%s)" % (state, country)
-    else:
-        location = "%s (all)" % country
-    return location
-
-
-def summary(df, country, state, county, date):
-    print("country: %s" % country)
-    print("state: %s" % state)
-    print("county: %s" % county)
-    data = df[df.dates <= date]
-    print("date: %s" % data.dates.iat[-1].strftime("%Y-%m-%d"))
-    print("cases: %s" % data.cases.iat[-1])
-    print("deaths: %s" % data.deaths.iat[-1])
 
 
 def parse_date(date_string):
@@ -323,7 +426,7 @@ def parse_date(date_string):
     return dateutil.parser.parse(date_string)
 
 
-def get_jhu_data(git_root, filter_country, filter_state, filter_county=None):
+def get_jhu_data(git_root):
 
     dir_name = git_root + "/csse_covid_19_data/csse_covid_19_daily_reports"
 
@@ -367,13 +470,14 @@ def get_jhu_data(git_root, filter_country, filter_state, filter_county=None):
             return 0
         return None
 
-    results = []
-    locations = set()
+    # store all results in a multi-level dictionary, format:
+    # results[('US', 'North Carolina', 'Wake')]['2020-07-03'] = { 'cases': 5000, 'deaths': 20 }
+    results = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
     for file_name in sorted(os.listdir(dir_name)):
         if file_name.endswith(".csv"):
             date = datetime.datetime.strptime(file_name.split(".")[0], "%m-%d-%Y")
-            total_cases = 0
-            total_deaths = 0
+            if not date:
+                continue
             csv_filename = os.path.join(dir_name, file_name)
             with open(csv_filename) as csv_file_obj:
 
@@ -386,26 +490,18 @@ def get_jhu_data(git_root, filter_country, filter_state, filter_county=None):
                     csv_cases = get_val_by_column_names(row, cases_col, number=True)
                     csv_deaths = get_val_by_column_names(row, deaths_col, number=True)
 
-                    locations.add(
-                        (csv_country or "", csv_state or "", csv_county or "")
-                    )
+                    # Save values at all appropriate levels
+                    for country_state_county in [
+                        (None, None, None),
+                        (csv_country, None, None),
+                        (csv_country, csv_state, None),
+                        (csv_country, csv_state, csv_county),
+                    ]:
+                        location_key = get_location_key(*country_state_county)
+                        results[location_key][date]["cases"] += int(csv_cases)
+                        results[location_key][date]["deaths"] += int(csv_deaths)
 
-                    if filter_country is not None and csv_country != filter_country:
-                        continue
-
-                    if filter_state is not None and csv_state != filter_state:
-                        continue
-
-                    if filter_county is not None and csv_county != filter_county:
-                        continue
-
-                    total_cases += int(csv_cases)
-                    total_deaths += int(csv_deaths)
-
-            if total_cases or total_deaths:
-                results.append([date, total_cases, total_deaths])
-
-    return results, locations
+    return results
 
 
 def get_wake_data():
