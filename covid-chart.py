@@ -199,18 +199,50 @@ def main():
             if county_filter and county != county_filter:
                 continue
             filtered_index += 1
-            prefix = "#%d (file %d of %d) " % (filtered_index, unfiltered_index, len(all_locations))
-            generate_chart(
-                all_loc_data, location_key, True, True, args, out, bulk=True, prefix=prefix
+            prefix = "#%d (file %d of %d) " % (
+                filtered_index,
+                unfiltered_index,
+                len(all_locations),
             )
             generate_chart(
-                all_loc_data, location_key, True, False, args, out, bulk=True, prefix=prefix
+                all_loc_data,
+                location_key,
+                True,
+                True,
+                args,
+                out,
+                bulk=True,
+                prefix=prefix,
             )
             generate_chart(
-                all_loc_data, location_key, False, True, args, out, bulk=True, prefix=prefix
+                all_loc_data,
+                location_key,
+                True,
+                False,
+                args,
+                out,
+                bulk=True,
+                prefix=prefix,
             )
             generate_chart(
-                all_loc_data, location_key, False, False, args, out, bulk=True, prefix=prefix
+                all_loc_data,
+                location_key,
+                False,
+                True,
+                args,
+                out,
+                bulk=True,
+                prefix=prefix,
+            )
+            generate_chart(
+                all_loc_data,
+                location_key,
+                False,
+                False,
+                args,
+                out,
+                bulk=True,
+                prefix=prefix,
             )
     else:
         generate_chart(all_loc_data, location_key, new, deaths, args, out)
@@ -274,7 +306,9 @@ def summary(datadict, location_key, end_date_str):
     print("deaths: %s" % data.deaths.iat[-1])
 
 
-def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=False, prefix=""):
+def generate_chart(
+    datadict, location_key, new, deaths, format_opts, out, bulk=False, prefix=""
+):
 
     df = get_location_dataframe(datadict, location_key)
     if df is None:
