@@ -335,7 +335,9 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
     title = "%s %s" % (get_location_string(*location_key), series_label)
     if moving_average:
         title = title + " (%s-day average)" % moving_average
-    ax.set_title(title)
+    plt.suptitle(title, fontsize=18)
+    subtitle = datetime.datetime.now().strftime("generated on %Y-%m-%d at %H:%M:%S")
+    plt.title(subtitle, fontsize=10)
     ax.set_ylabel(series_label)
 
     # Charts of NEW cases/deaths should be bar charts.
