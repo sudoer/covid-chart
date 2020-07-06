@@ -250,11 +250,11 @@ def main():
 
 def get_location_string(country, state, county):
     if county:
-        location_string = "%s, %s (%s)" % (county, state, country)
+        location_string = "%s, %s [%s]" % (county, state, country)
     elif state:
-        location_string = "%s (%s)" % (state, country)
+        location_string = "%s [%s]" % (state, country)
     else:
-        location_string = "%s (all)" % country
+        location_string = "%s [all]" % country
     return location_string
 
 
