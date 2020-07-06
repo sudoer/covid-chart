@@ -18,7 +18,7 @@ from collections import defaultdict
 
 def main():
 
-    parser = argparse.ArgumentParser(description="Wake County COVID-19 grapher")
+    parser = argparse.ArgumentParser(description="COVID-19 grapher")
 
     # DATA SOURCE OPTIONS
 

@@ -24,7 +24,7 @@ installed globally on your system.
     source venv/bin/activate
     pip install -r requirements.txt
     # ready to run
-    ./covid-chart.py --state="North Carolina"
+    ./covid-chart.py --country=US --state="North Carolina"
 
 # usage
 
@@ -37,29 +37,44 @@ installed globally on your system.
 
 ## graphing JHU data
 
-* a state: `./covid-chart.py --source=jhu --state='North Carolina'`
-* a county: `./covid-chart.py --source=jhu --state='North Carolina' --county=Wake`
-* JHU is default source: `./covid-chart.py --state='North Carolina' --county=Wake`
+* a state: `./covid-chart.py --source=jhu --country=US --state='North Carolina'`
+* a county: `./covid-chart.py --source=jhu --country=US --state='North Carolina' --county=Wake`
+* JHU is default source: `./covid-chart.py --country=US --state='North Carolina' --county=Wake`
 
 ## combine all of the arguments
 
     $ ./covid-chart.py --help
-    usage: covid-chart.py [-h] [--avg AVG] [--log] [--new] [--source SOURCE]
-                          [--jhu-data-dir JHU-DATA-DIR] [--county COUNTY]
-                          [--state STATE] [--country COUNTRY]
-
-    Wake County COVID-19 grapher
-
+    usage: covid-chart.py [-h] [--source SOURCE] [--jhu-data-dir JHU-DATA-DIR]
+                          [--new] [--deaths] [--country COUNTRY] [--state STATE]
+                          [--county COUNTY] [--start-date START-DATE]
+                          [--end-date END-DATE] [--avg AVG] [--log] [--summary]
+                          [--locations] [--bulk] [--out OUT] [--inches INCHES]
+                          [--dpi DPI]
+    
+    COVID-19 grapher
+    
     optional arguments:
       -h, --help            show this help message and exit
-      --avg AVG             size of sliding average
-      --log                 logarithmic scale
-      --new                 new cases
       --source SOURCE       jhu or wake
       --jhu-data-dir JHU-DATA-DIR
                             name of JHU git directory
-      --county COUNTY       US county (JHU data only)
-      --state STATE         US state (JHU data only)
+      --new                 new cases
+      --deaths              graph deaths rather than cases
       --country COUNTRY     country (JHU data only)
-
+      --state STATE         US state (JHU data only)
+      --county COUNTY       US county (JHU data only)
+      --start-date START-DATE
+                            start-date (YYYY-MM-DD)
+      --end-date END-DATE   start-date (YYYY-MM-DD)
+      --avg AVG             size of sliding average
+      --log                 logarithmic scale
+      --summary             print summary of latest information to stdout
+      --locations           print list of valid combinations of country, state,
+                            county
+      --bulk                output option: save all data as PNGs using default
+                            filenames
+      --out OUT             output option: save one graph to file with this
+                            filename
+      --inches INCHES       size in inches (WWxHH)
+      --dpi DPI             dots per inch
 
