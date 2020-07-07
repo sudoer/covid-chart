@@ -159,6 +159,10 @@ def main():
         required=False,
     )
     args = vars(parser.parse_args())
+    main2(args)
+
+
+def main2(args):
 
     all_loc_data = None
     location_key = None
