@@ -565,25 +565,40 @@ def get_wake_data(location_key):
                                     ],
                                     "Select": [
                                         {
-                                            "Measure": { "Expression": { "SourceRef": {"Source": "c"} }, "Property": "Running Total"},
+                                            "Measure": {
+                                                "Expression": {
+                                                    "SourceRef": {"Source": "c"}
+                                                },
+                                                "Property": "Running Total",
+                                            },
                                             "Name": "Confirmed Cases.Count of Event ID running total in Specimen Date",
                                         },
                                         {
-                                            "Column": { "Expression": { "SourceRef": { "Source": "c1" } }, "Property": "Date"},
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {"Source": "c1"}
+                                                },
+                                                "Property": "Date",
+                                            },
                                             "Name": "Calendar.Date",
                                         },
                                     ],
                                     "OrderBy": [
                                         {
                                             "Direction": 1,
-                                            "Expression": { "Column": { "Expression": { "SourceRef": { "Source": "c1" } }, "Property": "Date"} },
+                                            "Expression": {
+                                                "Column": {
+                                                    "Expression": {
+                                                        "SourceRef": {"Source": "c1"}
+                                                    },
+                                                    "Property": "Date",
+                                                }
+                                            },
                                         }
                                     ],
                                 },
                                 "Binding": {
-                                    "Primary": {
-                                        "Groupings": [{"Projections": [0, 1]}]
-                                    },
+                                    "Primary": {"Groupings": [{"Projections": [0, 1]}]},
                                     "DataReduction": {
                                         "DataVolume": 4,
                                         "Primary": {"Window": {"Count": 1000}},
@@ -598,9 +613,7 @@ def get_wake_data(location_key):
                 "QueryId": "",
                 "ApplicationContext": {
                     "DatasetId": "bd7fc819-b88a-41d0-a830-7a8dac4576ff",
-                    "Sources": [
-                        {"ReportId": "52d29698-2a1e-4f66-b0da-4260ef93d895"}
-                    ],
+                    "Sources": [{"ReportId": "52d29698-2a1e-4f66-b0da-4260ef93d895"}],
                 },
             }
         ],
@@ -613,7 +626,7 @@ def get_wake_data(location_key):
     results = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
 
     url = "https://wabi-us-gov-virginia-api.analysis.usgovcloudapi.net/public/reports/querydata"
-    headers={
+    headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:76.0) Gecko/20100101 Firefox/76.0",
         "Accept": "application/json, text/plain, */*",
         "Accept-Language": "en-US,en;q=0.5",
@@ -629,7 +642,9 @@ def get_wake_data(location_key):
 
     # CASES
 
-    rsp = requests.post(url, params={"synchronous": True}, headers=headers, data=json.dumps(case_query))
+    rsp = requests.post(
+        url, params={"synchronous": True}, headers=headers, data=json.dumps(case_query)
+    )
     raw = json.loads(rsp.content)
 
     ## print(json.dumps(raw))
@@ -645,16 +660,19 @@ def get_wake_data(location_key):
     # DEATHS
 
     death_query = case_query.copy()
-    death_query['queries'][0]['Query']['Commands'][0]['SemanticQueryDataShapeCommand']['Query']['From'][0] = {
-        "Name": "d",
-         "Entity": "Deaths"
-    }
-    death_query['queries'][0]['Query']['Commands'][0]['SemanticQueryDataShapeCommand']['Query']['Select'][0] = {
-        "Measure": { "Expression": { "SourceRef": {"Source": "d"} }, "Property": "Deaths"},
-        "Name": "Deaths.Deaths"
+    death_query["queries"][0]["Query"]["Commands"][0]["SemanticQueryDataShapeCommand"][
+        "Query"
+    ]["From"][0] = {"Name": "d", "Entity": "Deaths"}
+    death_query["queries"][0]["Query"]["Commands"][0]["SemanticQueryDataShapeCommand"][
+        "Query"
+    ]["Select"][0] = {
+        "Measure": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "Deaths"},
+        "Name": "Deaths.Deaths",
     }
 
-    rsp = requests.post(url, params={"synchronous": True}, headers=headers, data=json.dumps(death_query))
+    rsp = requests.post(
+        url, params={"synchronous": True}, headers=headers, data=json.dumps(death_query)
+    )
     raw = json.loads(rsp.content)
 
     ## print(json.dumps(raw))
