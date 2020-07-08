@@ -168,8 +168,8 @@ def main2(args):
     location_key = None
     source = args.pop("source")
     if source == "wake":
-        triplets = get_wake_data()
         location_key = get_location_key("US", "North Carolina", "Wake")
+        all_loc_data = get_wake_data(location_key)
     elif source == "jhu":
         # We'll set location_key here, assuming we're going to make a single chart.
         location_key = get_location_key(args["country"], args["state"], args["county"])
@@ -544,153 +544,132 @@ def get_jhu_data(git_root):
     return results
 
 
-def get_wake_data():
+def get_wake_data(location_key):
 
     # This POST was basically copied from the "view cases by day" graph on https://covid19.wakegov.com/
     # I am pretty sure it could be trimmed a bit... it looks like overkill.
-    rsp = requests.post(
-        "https://wabi-us-gov-virginia-api.analysis.usgovcloudapi.net/public/reports/querydata",
-        params={"synchronous": True},
-        headers={
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:76.0) Gecko/20100101 Firefox/76.0",
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "en-US,en;q=0.5",
-            "ActivityId": "227c0d27-d110-4ceb-81e1-917410272b35",
-            "RequestId": "3edeb143-cc51-c79f-783a-8824a6eebb22",
-            "X-PowerBI-ResourceKey": "52058879-6138-46ea-849c-4134a23b838e",
-            "Content-Type": "application/json;charset=UTF-8",
-            "Origin": "https://app.powerbigov.us",
-            "DNT": "1",
-            "Connection": "keep-alive",
-            "Referer": "https://app.powerbigov.us/view?r=eyJrIjoiNTIwNTg4NzktNjEzOC00NmVhLTg0OWMtNDEzNGEyM2I4MzhlIiwidCI6ImM1YTQxMmQxLTNhYmYtNDNhNC04YzViLTRhNTNhNmNjMGYyZiJ9",
-        },
-        data=json.dumps(
+
+    case_query = {
+        "version": "1.0.0",
+        "queries": [
             {
-                "version": "1.0.0",
-                "queries": [
-                    {
-                        "Query": {
-                            "Commands": [
-                                {
-                                    "SemanticQueryDataShapeCommand": {
-                                        "Query": {
-                                            "Version": 2,
-                                            "From": [
-                                                {
-                                                    "Name": "c1",
-                                                    "Entity": "Calendar",
-                                                    "Type": 0,
-                                                },
-                                                {
-                                                    "Name": "c",
-                                                    "Entity": "Confirmed Cases",
-                                                    "Type": 0,
-                                                },
-                                                {
-                                                    "Name": "d",
-                                                    "Entity": "Deaths",
-                                                    "Type": 0,
-                                                },
-                                            ],
-                                            "Select": [
-                                                {
-                                                    "Column": {
-                                                        "Expression": {
-                                                            "SourceRef": {
-                                                                "Source": "c1"
-                                                            }
-                                                        },
-                                                        "Property": "Date",
-                                                    },
-                                                    "Name": "Calendar.Date",
-                                                },
-                                                # WORKS
-                                                {
-                                                    "Measure": {
-                                                        "Expression": {
-                                                            "SourceRef": {"Source": "c"}
-                                                        },
-                                                        "Property": "Total Confirmed Cases",
-                                                    },
-                                                    "Name": "Confirmed Cases.Total Confirmed Cases",
-                                                },
-                                                {
-                                                    "Measure": {
-                                                        "Expression": {
-                                                            "SourceRef": {"Source": "d"}
-                                                        },
-                                                        "Property": "Deaths",
-                                                    },
-                                                    "Name": "Deaths.Deaths",
-                                                },
-                                                {
-                                                    "Measure": {
-                                                        "Expression": {
-                                                            "SourceRef": {"Source": "c"}
-                                                        },
-                                                        "Property": "Running Total",
-                                                    },
-                                                    "Name": "Confirmed Cases.Running Total",
-                                                },
-                                            ],
-                                            "OrderBy": [
-                                                {
-                                                    "Direction": 1,
-                                                    "Expression": {
-                                                        "Column": {
-                                                            "Expression": {
-                                                                "SourceRef": {
-                                                                    "Source": "c1"
-                                                                }
-                                                            },
-                                                            "Property": "Date",
-                                                        }
-                                                    },
-                                                }
-                                            ],
+                "Query": {
+                    "Commands": [
+                        {
+                            "SemanticQueryDataShapeCommand": {
+                                "Query": {
+                                    "Version": 2,
+                                    "From": [
+                                        {"Name": "c", "Entity": "Confirmed Cases"},
+                                        {"Name": "c1", "Entity": "Calendar"},
+                                    ],
+                                    "Select": [
+                                        {
+                                            "Measure": { "Expression": { "SourceRef": {"Source": "c"} }, "Property": "Running Total"},
+                                            "Name": "Confirmed Cases.Count of Event ID running total in Specimen Date",
                                         },
-                                        # "Binding": {
-                                        #    "Primary": { "Groupings": [ {"Projections": [0, 1, 2, 3]} ] },
-                                        #    "DataReduction": { "DataVolume": 4, "Primary": {"Window": {"Count": 1000}}, },
-                                        #    "Version": 1,
-                                        # },
-                                        "ExecutionMetricsKind": 3,
-                                    }
-                                }
-                            ]
-                        },
-                        # "CacheKey": '{"Commands":[{"SemanticQueryDataShapeCommand":{"Query":{"Version":2,"From":[{"Name":"c","Entity":"Confirmed Cases","Type":0},{"Name":"c1","Entity":"Calendar","Type":0},{"Name":"d","Entity":"Deaths","Type":0}],"Select":[{"Measure":{"Expression":{"SourceRef":{"Source":"c"}},"Property":"Running Total"},"Name":"Confirmed Cases.Running Total"},{"Measure":{"Expression":{"SourceRef":{"Source":"c"}},"Property":"Total Confirmed Cases"},"Name":"Confirmed Cases.Total Confirmed Cases"},{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"},"Name":"Calendar.Date"},{"Measure":{"Expression":{"SourceRef":{"Source":"d"}},"Property":"Deaths"},"Name":"Deaths.Deaths"}],"OrderBy":[{"Direction":1,"Expression":{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"}}}]},"Binding":{"Primary":{"Groupings":[{"Projections":[0,1,2,3]}]},"DataReduction":{"DataVolume":4,"Primary":{"Window":{"Count":1000}}},"Version":1},"ExecutionMetricsKind":3}}]}',
-                        "QueryId": "",
-                        "ApplicationContext": {
-                            "DatasetId": "bd7fc819-b88a-41d0-a830-7a8dac4576ff",
-                            "Sources": [
-                                {"ReportId": "52d29698-2a1e-4f66-b0da-4260ef93d895"}
-                            ],
-                        },
-                    }
-                ],
-                "cancelQueries": [],
-                "modelId": 318337,
+                                        {
+                                            "Column": { "Expression": { "SourceRef": { "Source": "c1" } }, "Property": "Date"},
+                                            "Name": "Calendar.Date",
+                                        },
+                                    ],
+                                    "OrderBy": [
+                                        {
+                                            "Direction": 1,
+                                            "Expression": { "Column": { "Expression": { "SourceRef": { "Source": "c1" } }, "Property": "Date"} },
+                                        }
+                                    ],
+                                },
+                                "Binding": {
+                                    "Primary": {
+                                        "Groupings": [{"Projections": [0, 1]}]
+                                    },
+                                    "DataReduction": {
+                                        "DataVolume": 4,
+                                        "Primary": {"Window": {"Count": 1000}},
+                                    },
+                                    "Version": 1,
+                                },
+                            }
+                        }
+                    ]
+                },
+                "CacheKey": '{"Commands":[{"SemanticQueryDataShapeCommand":{"Query":{"Version":2,"From":[{"Name":"c","Entity":"Confirmed Cases"},{"Name":"c1","Entity":"Calendar"}],"Select":[{"Measure":{"Expression":{"SourceRef":{"Source":"c"}},"Property":"Running Total"},"Name":"Confirmed Cases.Count of Event ID running total in Specimen Date"},{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"},"Name":"Calendar.Date"}],"OrderBy":[{"Direction":1,"Expression":{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"}}}]},"Binding":{"Primary":{"Groupings":[{"Projections":[0,1]}]},"DataReduction":{"DataVolume":4,"Primary":{"Window":{"Count":1000}}},"Version":1}}}]}',
+                "QueryId": "",
+                "ApplicationContext": {
+                    "DatasetId": "bd7fc819-b88a-41d0-a830-7a8dac4576ff",
+                    "Sources": [
+                        {"ReportId": "52d29698-2a1e-4f66-b0da-4260ef93d895"}
+                    ],
+                },
             }
-        ),
-    )
+        ],
+        "cancelQueries": [],
+        "modelId": 318337,
+    }
+
+    # SET-UP
+
+    results = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+
+    url = "https://wabi-us-gov-virginia-api.analysis.usgovcloudapi.net/public/reports/querydata"
+    headers={
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:76.0) Gecko/20100101 Firefox/76.0",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.5",
+        "ActivityId": "227c0d27-d110-4ceb-81e1-917410272b35",
+        "RequestId": "3edeb143-cc51-c79f-783a-8824a6eebb22",
+        "X-PowerBI-ResourceKey": "52058879-6138-46ea-849c-4134a23b838e",
+        "Content-Type": "application/json;charset=UTF-8",
+        "Origin": "https://app.powerbigov.us",
+        "DNT": "1",
+        "Connection": "keep-alive",
+        "Referer": "https://app.powerbigov.us/view?r=eyJrIjoiNTIwNTg4NzktNjEzOC00NmVhLTg0OWMtNDEzNGEyM2I4MzhlIiwidCI6ImM1YTQxMmQxLTNhYmYtNDNhNC04YzViLTRhNTNhNmNjMGYyZiJ9",
+    }
+
+    # CASES
+
+    rsp = requests.post(url, params={"synchronous": True}, headers=headers, data=json.dumps(case_query))
     raw = json.loads(rsp.content)
-    print(json.dumps(raw))
-    print("")
-    results1 = raw["results"][0]["result"]["data"]["dsr"]["DS"][0]["PH"][0]["DM0"]
-    results2 = [i["C"] for i in results1]
-    print(json.dumps(results2))
-    print("")
-    results3 = []
-    cases = 0
-    deaths = 0
-    for r in results2:
-        date = datetime.datetime.fromtimestamp(r[0] / 1000)
-        cases += r[1] if len(r) > 1 else 0
-        deaths += r[2] if len(r) > 2 else 0
-        if cases or deaths:
-            results3.append([date, cases, deaths])
-    return results3
+
+    ## print(json.dumps(raw))
+    result_set = raw["results"][0]["result"]["data"]["dsr"]["DS"][0]["PH"][0]["DM0"]
+    for i in result_set:
+        result_list = i["C"]
+        if len(result_list) == 2:
+            date = datetime.datetime.fromtimestamp(result_list[0] / 1000)
+            cases = result_list[1]
+            results[location_key][date]["cases"] += int(cases)
+            results[location_key][date]["deaths"] += 0
+
+    # DEATHS
+
+    death_query = case_query.copy()
+    death_query['queries'][0]['Query']['Commands'][0]['SemanticQueryDataShapeCommand']['Query']['From'][0] = {
+        "Name": "d",
+         "Entity": "Deaths"
+    }
+    death_query['queries'][0]['Query']['Commands'][0]['SemanticQueryDataShapeCommand']['Query']['Select'][0] = {
+        "Measure": { "Expression": { "SourceRef": {"Source": "d"} }, "Property": "Deaths"},
+        "Name": "Deaths.Deaths"
+    }
+
+    rsp = requests.post(url, params={"synchronous": True}, headers=headers, data=json.dumps(death_query))
+    raw = json.loads(rsp.content)
+
+    ## print(json.dumps(raw))
+    result_set = raw["results"][0]["result"]["data"]["dsr"]["DS"][0]["PH"][0]["DM0"]
+    cumulative_deaths = 0
+    for i in result_set:
+        result_list = i["C"]
+        if len(result_list) == 2:
+            date = datetime.datetime.fromtimestamp(result_list[0] / 1000)
+            deaths = int(result_list[1])
+            cumulative_deaths += deaths
+            results[location_key][date]["cases"] += 0
+            results[location_key][date]["deaths"] += cumulative_deaths
+
+    return results
 
 
 if __name__ == "__main__":
