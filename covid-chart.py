@@ -384,13 +384,14 @@ def generate_chart(
         avg_color = "black"
 
     # Title and labels
-    series_label = "%s %s" % (
+    basic_label = "%s %s" % (
         "new" if new else "cumulative",
         "deaths" if deaths else "cases",
     )
-    title = "%s %s" % (get_location_string(*location_key), series_label)
+    title = "%s %s" % (get_location_string(*location_key), basic_label)
+    series_label = basic_label
     if moving_average:
-        title = title + " (%s-day average)" % moving_average
+        series_label += " (%s-day average)" % moving_average
     plt.suptitle(title, fontsize=18)
     subtitle = datetime.datetime.now().strftime("generated on %Y-%m-%d at %H:%M:%S")
     plt.title(subtitle, fontsize=10)
