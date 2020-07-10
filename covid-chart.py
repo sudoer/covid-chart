@@ -76,14 +76,14 @@ def main():
         "--start-date",
         dest="start-date",
         default=None,
-        help="start-date (YYYY-MM-DD)",
+        help="start date of chart, but not of data (YYYY-MM-DD)",
         required=False,
     )
     parser.add_argument(
         "--end-date",
         dest="end-date",
         default=None,
-        help="start-date (YYYY-MM-DD)",
+        help="end-date of chart and data (YYYY-MM-DD)",
         required=False,
     )
 
@@ -159,13 +159,16 @@ def main():
         required=False,
     )
     args = vars(parser.parse_args())
-    main2(args)
+    read_data_and_generate_charts(args)
 
 
-def main2(args):
+def read_data_and_generate_charts(args):
 
     all_loc_data = None
     location_key = None
+
+    # DATA SOURCES
+
     source = args.pop("source")
     if source == "wake":
         location_key = get_location_key("US", "North Carolina", "Wake")
@@ -177,12 +180,16 @@ def main2(args):
     else:
         exit_on_error("unknown source '%s'" % source)
 
+    # CHART FILTERS AND OPTIONS
+
     new = args.pop("new")
     deaths = args.pop("deaths")
     out = args.pop("out")
     country_filter = args.pop("country")
     state_filter = args.pop("state")
     county_filter = args.pop("county")
+
+    # TEXT SUMMARY
 
     if args.pop("summary"):
         summary(all_loc_data, location_key, args["end-date"])
@@ -191,6 +198,9 @@ def main2(args):
             ["%s;%s;%s" % loc for loc in all_loc_data.keys()]
         ):
             print(location_string)
+
+    # BULK PROCESSING OF ALL CHARTS
+
     elif args.pop("bulk"):
         filtered_index = 0
         all_locations = all_loc_data.keys()
@@ -203,7 +213,7 @@ def main2(args):
             if county_filter and county != county_filter:
                 continue
             filtered_index += 1
-            prefix = "#%d (file %d of %d) " % (
+            prefix = "#%d (location %d of %d)" % (
                 filtered_index,
                 unfiltered_index,
                 len(all_locations),
@@ -248,6 +258,12 @@ def main2(args):
                 bulk=True,
                 prefix=prefix,
             )
+            summary_fullpath = build_full_file_path(out, *location_key, "summary.txt")
+            print("%s %s" % (prefix, summary_fullpath))
+            summary(all_loc_data, location_key, args["end-date"], summary_fullpath)
+
+    # SINGLE CHART
+
     else:
         generate_chart(all_loc_data, location_key, new, deaths, args, out)
 
@@ -266,16 +282,12 @@ def get_location_key(country, state, county):
     return country or "", state or "", county or ""
 
 
-def build_filename(country, state, county, new, deaths):
-    filename = "%s-%s.png" % (
-        "new" if new else "cumulative",
-        "deaths" if deaths else "cases",
-    )
-    country = re.sub("[^0-9a-zA-Z]+", "_", (country or "").lower())
-    state = re.sub("[^0-9a-zA-Z]+", "_", (state or "").lower())
-    county = re.sub("[^0-9a-zA-Z]+", "_", (county or "").lower())
+def build_full_file_path(top_dir, country, state, county, filename):
+    country = re.sub("[^0-9a-zA-Z]+", "_", (country or "").lower()).strip("_")
+    state = re.sub("[^0-9a-zA-Z]+", "_", (state or "").lower()).strip("_")
+    county = re.sub("[^0-9a-zA-Z]+", "_", (county or "").lower()).strip("_")
     return "/".join(
-        [x.strip("_") for x in filter(None, (country, state, county, filename))]
+        [x for x in filter(None, (top_dir, country, state, county, filename))]
     )
 
 
@@ -292,22 +304,28 @@ def get_location_dataframe(datadict, location_index):
     )
 
 
-def summary(datadict, location_key, end_date_str):
+def summary(datadict, location_key, end_date_str, outfile=None):
     country, state, county = location_key
-    print("country: %s" % (country or "ALL"))
-    print("state: %s" % (state or "ALL"))
-    print("county: %s" % (county or "ALL"))
+    output = ""
+    output += "country: %s\n" % (country or "ALL")
+    output += "state: %s\n" % (state or "ALL")
+    output += "county: %s\n" % (county or "ALL")
     df = get_location_dataframe(datadict, location_key)
     if df is None:
-        print("no matching data")
-        return
-    end_date = parse_date("yesterday")
-    if end_date_str:
-        end_date = parse_date(end_date_str)
-    data = df[df.dates <= end_date]
-    print("date: %s" % data.dates.iat[-1].strftime("%Y-%m-%d"))
-    print("cases: %s" % data.cases.iat[-1])
-    print("deaths: %s" % data.deaths.iat[-1])
+        output += "no matching data\n"
+    else:
+        end_date = parse_date("yesterday")
+        if end_date_str:
+            end_date = parse_date(end_date_str)
+        data = df[df.dates <= end_date]
+        output += "date: %s\n" % data.dates.iat[-1].strftime("%Y-%m-%d")
+        output += "cases: %s\n" % data.cases.iat[-1]
+        output += "deaths: %s\n" % data.deaths.iat[-1]
+    if outfile:
+        with open(outfile, "w") as file_obj:
+            print(output, file=file_obj)
+    else:
+        print(output)
 
 
 def generate_chart(
@@ -367,13 +385,14 @@ def generate_chart(
         avg_color = "black"
 
     # Title and labels
-    series_label = "%s %s" % (
+    basic_label = "%s %s" % (
         "new" if new else "cumulative",
         "deaths" if deaths else "cases",
     )
+    title = "%s %s" % (get_location_string(*location_key), basic_label)
+    series_label = basic_label
     if moving_average:
-        series_label = series_label + " (%s-day average)" % moving_average
-    title = "%s %s" % (get_location_string(*location_key), series_label)
+        series_label += " (%s-day average)" % moving_average
     plt.suptitle(title, fontsize=18)
     subtitle = datetime.datetime.now().strftime("generated on %Y-%m-%d at %H:%M:%S")
     plt.title(subtitle, fontsize=10)
@@ -436,13 +455,15 @@ def generate_chart(
     ax.set_ylim([0, ylim[1]])
 
     if bulk:
-        filename = build_filename(*location_key, new, deaths)
-        if out:
-            filename = "%s/%s" % (out, filename)
-        dirname = os.path.dirname(filename)
+        png_filename = "%s-%s.png" % (
+            "new" if new else "cumulative",
+            "deaths" if deaths else "cases",
+        )
+        png_fullpath = build_full_file_path(out, *location_key, png_filename)
+        dirname = os.path.dirname(png_fullpath)
         os.makedirs(dirname, exist_ok=True)
-        print("%ssaving %s" % (prefix, filename))
-        plt.savefig(filename)
+        print("%s %s" % (prefix, png_fullpath))
+        plt.savefig(png_fullpath)
     elif not out:
         print("showing chart: %s" % title)
         plt.show()
