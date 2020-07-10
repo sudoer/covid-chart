@@ -340,6 +340,7 @@ def generate_chart(
     # Y axis can be linear or logarithmic
     if format_opts["log"]:
         ax.set_yscale("log")
+    ax.ticklabel_format(axis='y', style='plain')
 
     # And a corresponding grid
     ## ax.grid(which="both")
@@ -370,9 +371,9 @@ def generate_chart(
         "new" if new else "cumulative",
         "deaths" if deaths else "cases",
     )
-    title = "%s %s" % (get_location_string(*location_key), series_label)
     if moving_average:
-        title = title + " (%s-day average)" % moving_average
+        series_label = series_label + " (%s-day average)" % moving_average
+    title = "%s %s" % (get_location_string(*location_key), series_label)
     plt.suptitle(title, fontsize=18)
     subtitle = datetime.datetime.now().strftime("generated on %Y-%m-%d at %H:%M:%S")
     plt.title(subtitle, fontsize=10)
