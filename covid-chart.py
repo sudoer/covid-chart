@@ -226,7 +226,7 @@ def read_data_and_generate_charts(args):
         filtered_index = 0
         all_locations = all_loc_data.keys()
         for unfiltered_index, location_key in enumerate(all_locations, 1):
-            country, state, county = location_key
+            country, state, county = split_location_key(location_key)
             if country_filter and country != country_filter:
                 continue
             if state_filter and state != state_filter:
