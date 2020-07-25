@@ -585,15 +585,22 @@ def get_jhu_data(git_root):
                     csv_deaths = get_val_by_column_names(row, deaths_col, number=True)
 
                     # Save values at all appropriate levels
-                    for country_state_county in [
-                        (None, None, None),
-                        (csv_country, None, None),
-                        (csv_country, csv_state, None),
-                        (csv_country, csv_state, csv_county),
-                    ]:
-                        location_key = join_location_key(*country_state_county)
-                        results[location_key][date_str]["cases"] += int(csv_cases)
-                        results[location_key][date_str]["deaths"] += int(csv_deaths)
+                    location_keys = [
+                        join_location_key(None, None, None),
+                        join_location_key(csv_country, None, None),
+                        join_location_key(csv_country, csv_state, None),
+                        join_location_key(csv_country, csv_state, csv_county),
+                    ]
+                    # Do not add values to the same level twice.
+                    for location_key in set(location_keys):
+                        # location_key = join_location_key(*country_state_county)
+                        results[location_key][date_str]["cases"] += csv_cases
+                        results[location_key][date_str]["deaths"] += csv_deaths
+                        if debug:
+                            print(
+                                "date=%s, location=%s, cases=%d, deaths=%d"
+                                % (date_str, location_key, csv_cases, csv_deaths)
+                            )
 
     return results
 
