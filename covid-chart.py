@@ -171,14 +171,16 @@ def read_data_and_generate_charts(args):
 
     source = args.pop("source")
     if source == "wake":
-        location_key = get_location_key("US", "North Carolina", "Wake")
+        location_key = join_location_key("US", "North Carolina", "Wake")
         all_loc_data = get_wake_data(location_key)
     elif source == "jhu":
         # We'll set location_key here, assuming we're going to make a single chart.
-        location_key = get_location_key(args["country"], args["state"], args["county"])
+        location_key = join_location_key(args["country"], args["state"], args["county"])
         all_loc_data = get_jhu_data(args.pop("jhu-data-dir"))
     else:
         exit_on_error("unknown source '%s'" % source)
+
+    #DEBUG print(json.dumps(all_loc_data))
 
     # CHART FILTERS AND OPTIONS
 
@@ -258,7 +260,7 @@ def read_data_and_generate_charts(args):
                 bulk=True,
                 prefix=prefix,
             )
-            summary_fullpath = build_full_file_path(out, *location_key, "summary.txt")
+            summary_fullpath = build_full_file_path(out, location_key, "summary.txt")
             print("%s %s" % (prefix, summary_fullpath))
             summary(all_loc_data, location_key, args["end-date"], summary_fullpath)
 
@@ -268,7 +270,8 @@ def read_data_and_generate_charts(args):
         generate_chart(all_loc_data, location_key, new, deaths, args, out)
 
 
-def get_location_string(country, state, county):
+def get_location_string(location_key):
+    country, state, county = split_location_key(location_key)
     if county:
         location_string = "%s, %s [%s]" % (county, state, country)
     elif state:
@@ -278,11 +281,20 @@ def get_location_string(country, state, county):
     return location_string
 
 
-def get_location_key(country, state, county):
-    return country or "", state or "", county or ""
+def join_location_key(country, state, county):
+    return '%s|%s|%s' % ( country or "*", state or "*", county or "*" )
 
 
-def build_full_file_path(top_dir, country, state, county, filename):
+def split_location_key(key):
+    country, state, county = key.split("|")
+    country = None if country == "*" else country
+    state = None if state == "*" else state
+    county = None if county == "*" else county
+    return country, state, county
+
+
+def build_full_file_path(top_dir, location_key, filename):
+    country, state, county = split_location_key(location_key)
     country = re.sub("[^0-9a-zA-Z]+", "_", (country or "").lower()).strip("_")
     state = re.sub("[^0-9a-zA-Z]+", "_", (state or "").lower()).strip("_")
     county = re.sub("[^0-9a-zA-Z]+", "_", (county or "").lower()).strip("_")
@@ -297,15 +309,15 @@ def get_location_dataframe(datadict, location_index):
         return None
     return pandas.DataFrame(
         data={
-            "dates": [date for date in location_data],
-            "cases": [location_data[date]["cases"] for date in location_data],
-            "deaths": [location_data[date]["deaths"] for date in location_data],
+            "dates": [datetime.date.fromisoformat(date_str) for date_str in location_data],
+            "cases": [location_data[date_str]["cases"] for date_str in location_data],
+            "deaths": [location_data[date_str]["deaths"] for date_str in location_data],
         }
     )
 
 
 def summary(datadict, location_key, end_date_str, outfile=None):
-    country, state, county = location_key
+    country, state, county = split_location_key(location_key)
     output = ""
     output += "country: %s\n" % (country or "ALL")
     output += "state: %s\n" % (state or "ALL")
@@ -389,7 +401,7 @@ def generate_chart(
         "new" if new else "cumulative",
         "deaths" if deaths else "cases",
     )
-    title = "%s %s" % (get_location_string(*location_key), basic_label)
+    title = "%s %s" % (get_location_string(location_key), basic_label)
     series_label = basic_label
     if moving_average:
         series_label += " (%s-day average)" % moving_average
@@ -459,7 +471,7 @@ def generate_chart(
             "new" if new else "cumulative",
             "deaths" if deaths else "cases",
         )
-        png_fullpath = build_full_file_path(out, *location_key, png_filename)
+        png_fullpath = build_full_file_path(out, location_key, png_filename)
         dirname = os.path.dirname(png_fullpath)
         os.makedirs(dirname, exist_ok=True)
         print("%s %s" % (prefix, png_fullpath))
@@ -479,12 +491,13 @@ def exit_on_error(string):
 
 
 def parse_date(date_string):
+    today = datetime.date.today()
     if date_string.lower() == "today":
-        return datetime.datetime.now()
+        return today
     if date_string.lower() == "yesterday":
-        return datetime.datetime.now() - datetime.timedelta(days=1)
+        return today - datetime.timedelta(days=1)
     if date_string.lower() == "tomorrow":
-        return datetime.datetime.now() + datetime.timedelta(days=1)
+        return today + datetime.timedelta(days=1)
     return dateutil.parser.parse(date_string)
 
 
@@ -534,13 +547,14 @@ def get_jhu_data(git_root):
         return None
 
     # store all results in a multi-level dictionary, format:
-    # results[('US', 'North Carolina', 'Wake')]['2020-07-03'] = { 'cases': 5000, 'deaths': 20 }
+    # results['US|North Carolina|Wake']['2020-07-03'] = { 'cases': 5000, 'deaths': 20 }
     results = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
     for file_name in sorted(os.listdir(dir_name)):
         if file_name.endswith(".csv"):
-            date = datetime.datetime.strptime(file_name.split(".")[0], "%m-%d-%Y")
-            if not date:
+            csv_datetime = datetime.datetime.strptime(file_name.split(".")[0], "%m-%d-%Y")
+            if not csv_datetime:
                 continue
+            date_str = csv_datetime.strftime('%Y-%m-%d')
             csv_filename = os.path.join(dir_name, file_name)
             with open(csv_filename) as csv_file_obj:
 
@@ -560,9 +574,9 @@ def get_jhu_data(git_root):
                         (csv_country, csv_state, None),
                         (csv_country, csv_state, csv_county),
                     ]:
-                        location_key = get_location_key(*country_state_county)
-                        results[location_key][date]["cases"] += int(csv_cases)
-                        results[location_key][date]["deaths"] += int(csv_deaths)
+                        location_key = join_location_key(*country_state_county)
+                        results[location_key][date_str]["cases"] += int(csv_cases)
+                        results[location_key][date_str]["deaths"] += int(csv_deaths)
 
     return results
 
@@ -675,10 +689,11 @@ def get_wake_data(location_key):
     for i in result_set:
         result_list = i["C"]
         if len(result_list) == 2:
-            date = datetime.datetime.fromtimestamp(result_list[0] / 1000)
+            data_datetime = datetime.datetime.fromtimestamp(result_list[0] / 1000)
+            date_str = data_datetime.strftime('%Y-%m-%d')
             cases = result_list[1]
-            results[location_key][date]["cases"] += int(cases)
-            results[location_key][date]["deaths"] += 0
+            results[location_key][date_str]["cases"] += int(cases)
+            results[location_key][date_str]["deaths"] += 0
 
     # DEATHS
 
@@ -704,11 +719,12 @@ def get_wake_data(location_key):
     for i in result_set:
         result_list = i["C"]
         if len(result_list) == 2:
-            date = datetime.datetime.fromtimestamp(result_list[0] / 1000)
+            data_datetime = datetime.datetime.fromtimestamp(result_list[0] / 1000)
+            date_str = data_datetime.strftime('%Y-%m-%d')
             deaths = int(result_list[1])
             cumulative_deaths += deaths
-            results[location_key][date]["cases"] += 0
-            results[location_key][date]["deaths"] += cumulative_deaths
+            results[location_key][date_str]["cases"] += 0
+            results[location_key][date_str]["deaths"] += cumulative_deaths
 
     return results
 
