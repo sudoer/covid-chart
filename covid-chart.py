@@ -492,23 +492,24 @@ def get_jhu_data(git_root):
 
     dir_name = git_root + "/csse_covid_19_data/csse_covid_19_daily_reports"
 
-    # Formats vary by date:
+    # Formats have changed over time:
 
-    # COVID-19/csse_covid_19_data/csse_covid_19_daily_reports/02-10-2020.csv
+    # first seen in COVID-19/csse_covid_19_data/csse_covid_19_daily_reports/01-22-2020.csv
     # Province/State,Country/Region,Last Update,Confirmed,Deaths,Recovered
     # "Chicago, IL",US,2020-02-09T19:03:03,2,0,2
     # "San Benito, CA",US,2020-02-03T03:53:02,2,0,0
 
-    # COVID-19/csse_covid_19_data/csse_covid_19_daily_reports/03-10-2020.csv
+    # first seen in COVID-19/csse_covid_19_data/csse_covid_19_daily_reports/03-01-2020.csv
     # Province/State,Country/Region,Last Update,Confirmed,Deaths,Recovered,Latitude,Longitude
     # Washington,US,2020-03-10T22:13:11,267,23,1,47.4009,-121.4905
     # New York,US,2020-03-10T17:13:27,173,0,0,42.1657,-74.9481
 
-    # COVID-19/csse_covid_19_data/csse_covid_19_daily_reports/04-10-2020.csv
+    # first seen in COVID-19/csse_covid_19_data/csse_covid_19_daily_reports/03-22-2020.csv
     # FIPS,Admin2,Province_State,Country_Region,Last_Update,Lat,Long_,Confirmed,Deaths,Recovered,Active,Combined_Key
     # 45001,Abbeville,South Carolina,US,2020-04-10 22:54:07,34.22333378,-82.46170658,7,0,0,0,"Abbeville, South Carolina, US"
     # 22001,Acadia,Louisiana,US,2020-04-10 22:54:07,30.295064899999996,-92.41419698,94,4,0,0,"Acadia, Louisiana, US"
 
+    # first seen in COVID-19/csse_covid_19_data/csse_covid_19_daily_reports/05-29-2020.csv
     # FIPS,Admin2,Province_State,Country_Region,Last_Update,Lat,Long_,Confirmed,Deaths,Recovered,Active,Combined_Key,Incidence_Rate,Case-Fatality_Ratio
     # 45001,Abbeville,South Carolina,US,2020-06-22 04:33:20,34.22333378,-82.46170658,88,0,0,88,"Abbeville, South Carolina, US",358.78827414685856,0.0
 
