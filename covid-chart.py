@@ -158,6 +158,18 @@ def main():
         help="dots per inch",
         required=False,
     )
+
+    # DEBUG
+
+    parser.add_argument(
+        "--debug",
+        dest="debug",
+        action="store_true",
+        default=False,
+        help="print extra debug info",
+        required=False,
+    )
+
     args = vars(parser.parse_args())
     read_data_and_generate_charts(args)
 
@@ -180,7 +192,9 @@ def read_data_and_generate_charts(args):
     else:
         exit_on_error("unknown source '%s'" % source)
 
-    #DEBUG print(json.dumps(all_loc_data))
+    debug = args.pop("debug")
+    if debug:
+        print(json.dumps(all_loc_data))
 
     # CHART FILTERS AND OPTIONS
 
