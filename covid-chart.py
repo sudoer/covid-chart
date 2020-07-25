@@ -16,6 +16,9 @@ import tkinter as tk  # sudo apt-get install python3-tk
 from collections import defaultdict
 
 
+debug = False
+
+
 def main():
 
     parser = argparse.ArgumentParser(description="COVID-19 grapher")
@@ -171,6 +174,9 @@ def main():
     )
 
     args = vars(parser.parse_args())
+    global debug
+    debug = args.pop("debug")
+
     read_data_and_generate_charts(args)
 
 
@@ -192,7 +198,6 @@ def read_data_and_generate_charts(args):
     else:
         exit_on_error("unknown source '%s'" % source)
 
-    debug = args.pop("debug")
     if debug:
         print(json.dumps(all_loc_data))
 
