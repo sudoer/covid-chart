@@ -512,7 +512,10 @@ def parse_date(date_string):
         return today - datetime.timedelta(days=1)
     if date_string.lower() == "tomorrow":
         return today + datetime.timedelta(days=1)
-    return dateutil.parser.parse(date_string)
+    dt = dateutil.parser.parse(date_string)
+    if dt:
+        return dt.date()
+    return None
 
 
 def get_jhu_data(git_root):
