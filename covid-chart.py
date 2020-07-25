@@ -301,7 +301,7 @@ def get_location_string(location_key):
 
 
 def join_location_key(country, state, county):
-    return '%s|%s|%s' % ( country or "*", state or "*", county or "*" )
+    return "%s|%s|%s" % (country or "*", state or "*", county or "*")
 
 
 def split_location_key(key):
@@ -328,7 +328,9 @@ def get_location_dataframe(datadict, location_index):
         return None
     return pandas.DataFrame(
         data={
-            "dates": [datetime.date.fromisoformat(date_str) for date_str in location_data],
+            "dates": [
+                datetime.date.fromisoformat(date_str) for date_str in location_data
+            ],
             "cases": [location_data[date_str]["cases"] for date_str in location_data],
             "deaths": [location_data[date_str]["deaths"] for date_str in location_data],
         }
@@ -389,7 +391,7 @@ def generate_chart(
     # Y axis can be linear or logarithmic
     if format_opts["log"]:
         ax.set_yscale("log")
-    ax.ticklabel_format(axis='y', style='plain')
+    ax.ticklabel_format(axis="y", style="plain")
 
     # And a corresponding grid
     ## ax.grid(which="both")
@@ -573,10 +575,11 @@ def get_jhu_data(git_root):
     results = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
     for file_name in sorted(os.listdir(dir_name)):
         if file_name.endswith(".csv"):
-            csv_datetime = datetime.datetime.strptime(file_name.split(".")[0], "%m-%d-%Y")
+            file_prefix = file_name.split(".")[0]
+            csv_datetime = datetime.datetime.strptime(file_prefix, "%m-%d-%Y")
             if not csv_datetime:
                 continue
-            date_str = csv_datetime.strftime('%Y-%m-%d')
+            date_str = csv_datetime.strftime("%Y-%m-%d")
             csv_filename = os.path.join(dir_name, file_name)
             with open(csv_filename) as csv_file_obj:
 
@@ -719,7 +722,7 @@ def get_wake_data(location_key):
         result_list = i["C"]
         if len(result_list) == 2:
             data_datetime = datetime.datetime.fromtimestamp(result_list[0] / 1000)
-            date_str = data_datetime.strftime('%Y-%m-%d')
+            date_str = data_datetime.strftime("%Y-%m-%d")
             cases = result_list[1]
             results[location_key][date_str]["cases"] += int(cases)
             results[location_key][date_str]["deaths"] += 0
@@ -749,7 +752,7 @@ def get_wake_data(location_key):
         result_list = i["C"]
         if len(result_list) == 2:
             data_datetime = datetime.datetime.fromtimestamp(result_list[0] / 1000)
-            date_str = data_datetime.strftime('%Y-%m-%d')
+            date_str = data_datetime.strftime("%Y-%m-%d")
             deaths = int(result_list[1])
             cumulative_deaths += deaths
             results[location_key][date_str]["cases"] += 0
