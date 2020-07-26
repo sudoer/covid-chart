@@ -12,11 +12,13 @@ import pandas
 import re
 import requests
 import sys
+import urllib
 import tkinter as tk  # sudo apt-get install python3-tk
 from collections import defaultdict
 
 
 debug = False
+populations = {}
 
 
 def main():
@@ -98,6 +100,14 @@ def main():
         type=int,
         default=None,
         help="size of sliding average",
+        required=False,
+    )
+    parser.add_argument(
+        "--per-pop",
+        dest="per-pop",
+        action="store_true",
+        default=False,
+        help="graph per population",
         required=False,
     )
     parser.add_argument(
@@ -210,6 +220,13 @@ def read_data_and_generate_charts(args):
     state_filter = args.pop("state")
     county_filter = args.pop("county")
 
+    per_pop = args.pop("per-pop")
+    if per_pop:
+        global populations
+        populations = get_us_population_data()
+        if debug:
+            print(json.dumps(populations))
+
     # TEXT SUMMARY
 
     if args.pop("summary"):
@@ -286,7 +303,7 @@ def read_data_and_generate_charts(args):
     # SINGLE CHART
 
     else:
-        generate_chart(all_loc_data, location_key, new, deaths, args, out)
+        generate_chart(all_loc_data, location_key, new, deaths, args, out, pop=per_pop)
 
 
 def get_location_string(location_key):
@@ -362,7 +379,7 @@ def summary(datadict, location_key, end_date_str, outfile=None):
 
 
 def generate_chart(
-    datadict, location_key, new, deaths, format_opts, out, bulk=False, prefix=""
+    datadict, location_key, new, deaths, format_opts, out, pop=False, bulk=False, prefix=""
 ):
 
     df = get_location_dataframe(datadict, location_key)
@@ -404,6 +421,9 @@ def generate_chart(
         series = df.deaths
     if new:
         series = series.diff()
+    if pop and location_key in populations:
+        location_pop100k = float(populations[location_key]) / 100000.0
+        series = series.div(location_pop100k)
 
     # Show moving average if we're looking at NEW cases/deaths.
     moving_average = format_opts["avg"]
@@ -760,6 +780,32 @@ def get_wake_data(location_key):
 
     return results
 
+
+def get_us_population_data():
+    url = "https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv"
+    filename = "co-est2019-alldata.csv"
+    if not os.path.isfile(filename):
+        print("downloading %s" % filename)
+        response = urllib.request.urlopen(url)
+        data = response.read()
+        file_ptr = open(filename, 'w')
+        file_ptr.write(data)
+        file_ptr.close()
+    location_population = {}
+    with open(filename) as csv_file_obj:
+        print("reading %s" % filename)
+        csv_dict_reader = csv.DictReader(csv_file_obj)
+        for row in csv_dict_reader:
+            state = row.get('STNAME')
+            county = row.get('CTYNAME', '')
+            if state == county:
+                county = None
+            else:
+                county = county.replace(' County', '').replace(' Parish', '')
+            population = row.get('POPESTIMATE2019')
+            location_key = join_location_key('US', state, county)
+            location_population[location_key] = population
+    return location_population
 
 if __name__ == "__main__":
     main()
