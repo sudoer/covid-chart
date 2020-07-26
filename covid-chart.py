@@ -103,11 +103,11 @@ def main():
         required=False,
     )
     parser.add_argument(
-        "--per-pop",
-        dest="per-pop",
-        action="store_true",
-        default=False,
-        help="graph per population",
+        "--per",
+        dest="per",
+        type=int,
+        default=None,
+        help="graph per number of population",
         required=False,
     )
     parser.add_argument(
@@ -220,7 +220,7 @@ def read_data_and_generate_charts(args):
     state_filter = args.pop("state")
     county_filter = args.pop("county")
 
-    per_pop = args.pop("per-pop")
+    per_pop = args.pop("per")
     if per_pop:
         global populations
         populations = get_us_population_data()
@@ -379,7 +379,7 @@ def summary(datadict, location_key, end_date_str, outfile=None):
 
 
 def generate_chart(
-    datadict, location_key, new, deaths, format_opts, out, pop=False, bulk=False, prefix=""
+    datadict, location_key, new, deaths, format_opts, out, pop=None, bulk=False, prefix=""
 ):
 
     df = get_location_dataframe(datadict, location_key)
@@ -422,8 +422,8 @@ def generate_chart(
     if new:
         series = series.diff()
     if pop and location_key in populations:
-        location_pop100k = float(populations[location_key]) / 100000.0
-        series = series.div(location_pop100k)
+        location_pop_units = float(populations[location_key]) / float(pop)
+        series = series.div(location_pop_units)
 
     # Show moving average if we're looking at NEW cases/deaths.
     moving_average = format_opts["avg"]
@@ -444,6 +444,8 @@ def generate_chart(
     )
     title = "%s %s" % (get_location_string(location_key), basic_label)
     series_label = basic_label
+    if pop:
+        series_label += " per %d" % pop
     if moving_average:
         series_label += " (%s-day average)" % moving_average
     plt.suptitle(title, fontsize=18)
