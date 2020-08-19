@@ -41,6 +41,16 @@ installed globally on your system.
 * a county: `./covid-chart.py --source=jhu --country=US --state='North Carolina' --county=Wake`
 * JHU is default source: `./covid-chart.py --country=US --state='North Carolina' --county=Wake`
 
+## bulk
+
+This combination will produce 510 files:
+* 100 counties X (4 graphs and a summary)
+* "NC unassigned" (like a county) X (4 graphs and a summary)
+* (4 graphs and a summary) for the entire state
+
+    ./covid-chart.py --bulk --country=US --state=North\ Carolina --out=test
+
+
 ## combine all of the arguments
 
     $ ./covid-chart.py --help
