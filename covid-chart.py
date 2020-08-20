@@ -620,7 +620,80 @@ def get_wake_data(location_key):
     # I am pretty sure it could be trimmed a bit... it looks like overkill.
     ## I had to update this on 08/19/2020 to fix a problem from a change on the 17th. -PB
 
-    case_query = {"version":"1.0.0","queries":[{"Query":{"Commands":[{"SemanticQueryDataShapeCommand":{"Query":{"Version":2,"From":[{"Name":"c1","Entity":"Calendar","Type":0},{"Name":"c","Entity":"COVID19 Cases","Type":0}],"Select":[{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"},"Name":"Calendar.Date"},{"Measure":{"Expression":{"SourceRef":{"Source":"c"}},"Property":"Confirmed Cases"},"Name":"COVID19 Cases.Confirmed Cases"},{"Measure":{"Expression":{"SourceRef":{"Source":"c"}},"Property":"Cumulative Confirmed Cases"},"Name":"COVID19 Cases.Cumulative Confirmed Cases"}]},"Binding":{"Primary":{"Groupings":[{"Projections":[0,1,2]}]},"DataReduction":{"DataVolume":4,"Primary":{"Sample":{}}},"SuppressedJoinPredicates":[2],"Version":1}}}]},"CacheKey":"{\"Commands\":[{\"SemanticQueryDataShapeCommand\":{\"Query\":{\"Version\":2,\"From\":[{\"Name\":\"c1\",\"Entity\":\"Calendar\",\"Type\":0},{\"Name\":\"c\",\"Entity\":\"COVID19 Cases\",\"Type\":0}],\"Select\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"c1\"}},\"Property\":\"Date\"},\"Name\":\"Calendar.Date\"},{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"c\"}},\"Property\":\"Confirmed Cases\"},\"Name\":\"COVID19 Cases.Confirmed Cases\"},{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"c\"}},\"Property\":\"Cumulative Confirmed Cases\"},\"Name\":\"COVID19 Cases.Cumulative Confirmed Cases\"}]},\"Binding\":{\"Primary\":{\"Groupings\":[{\"Projections\":[0,1,2]}]},\"DataReduction\":{\"DataVolume\":4,\"Primary\":{\"Sample\":{}}},\"SuppressedJoinPredicates\":[2],\"Version\":1}}}]}","QueryId":"","ApplicationContext":{"DatasetId":"bd7fc819-b88a-41d0-a830-7a8dac4576ff","Sources":[{"ReportId":"52d29698-2a1e-4f66-b0da-4260ef93d895"}]}}],"cancelQueries":[],"modelId":318337}
+    case_query = {
+        "version": "1.0.0",
+        "queries": [
+            {
+                "Query": {
+                    "Commands": [
+                        {
+                            "SemanticQueryDataShapeCommand": {
+                                "Query": {
+                                    "Version": 2,
+                                    "From": [
+                                        {"Name": "c1", "Entity": "Calendar", "Type": 0},
+                                        {
+                                            "Name": "c",
+                                            "Entity": "COVID19 Cases",
+                                            "Type": 0,
+                                        },
+                                    ],
+                                    "Select": [
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {"Source": "c1"}
+                                                },
+                                                "Property": "Date",
+                                            },
+                                            "Name": "Calendar.Date",
+                                        },
+                                        {
+                                            "Measure": {
+                                                "Expression": {
+                                                    "SourceRef": {"Source": "c"}
+                                                },
+                                                "Property": "Confirmed Cases",
+                                            },
+                                            "Name": "COVID19 Cases.Confirmed Cases",
+                                        },
+                                        {
+                                            "Measure": {
+                                                "Expression": {
+                                                    "SourceRef": {"Source": "c"}
+                                                },
+                                                "Property": "Cumulative Confirmed Cases",
+                                            },
+                                            "Name": "COVID19 Cases.Cumulative Confirmed Cases",
+                                        },
+                                    ],
+                                },
+                                "Binding": {
+                                    "Primary": {
+                                        "Groupings": [{"Projections": [0, 1, 2]}]
+                                    },
+                                    "DataReduction": {
+                                        "DataVolume": 4,
+                                        "Primary": {"Sample": {}},
+                                    },
+                                    "SuppressedJoinPredicates": [2],
+                                    "Version": 1,
+                                },
+                            }
+                        }
+                    ]
+                },
+                "CacheKey": '{"Commands":[{"SemanticQueryDataShapeCommand":{"Query":{"Version":2,"From":[{"Name":"c1","Entity":"Calendar","Type":0},{"Name":"c","Entity":"COVID19 Cases","Type":0}],"Select":[{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"},"Name":"Calendar.Date"},{"Measure":{"Expression":{"SourceRef":{"Source":"c"}},"Property":"Confirmed Cases"},"Name":"COVID19 Cases.Confirmed Cases"},{"Measure":{"Expression":{"SourceRef":{"Source":"c"}},"Property":"Cumulative Confirmed Cases"},"Name":"COVID19 Cases.Cumulative Confirmed Cases"}]},"Binding":{"Primary":{"Groupings":[{"Projections":[0,1,2]}]},"DataReduction":{"DataVolume":4,"Primary":{"Sample":{}}},"SuppressedJoinPredicates":[2],"Version":1}}}]}',
+                "QueryId": "",
+                "ApplicationContext": {
+                    "DatasetId": "bd7fc819-b88a-41d0-a830-7a8dac4576ff",
+                    "Sources": [{"ReportId": "52d29698-2a1e-4f66-b0da-4260ef93d895"}],
+                },
+            }
+        ],
+        "cancelQueries": [],
+        "modelId": 318337,
+    }
 
     # SET-UP
 
@@ -661,7 +734,76 @@ def get_wake_data(location_key):
 
     # DEATHS
 
-    death_query = {"version":"1.0.0","queries":[{"Query":{"Commands":[{"SemanticQueryDataShapeCommand":{"Query":{"Version":2,"From":[{"Name":"c1","Entity":"Calendar","Type":0},{"Name":"d","Entity":"Deaths","Type":0}],"Select":[{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"},"Name":"Calendar.Date"},{"Measure":{"Expression":{"SourceRef":{"Source":"d"}},"Property":"Deaths"},"Name":"Deaths.Deaths"},{"Measure":{"Expression":{"SourceRef":{"Source":"d"}},"Property":"Cumulative Deaths"},"Name":"Deaths.Cumulative Deaths"}]},"Binding":{"Primary":{"Groupings":[{"Projections":[0,1,2]}]},"DataReduction":{"DataVolume":4,"Primary":{"Sample":{}}},"SuppressedJoinPredicates":[2],"Version":1}}}]},"CacheKey":"{\"Commands\":[{\"SemanticQueryDataShapeCommand\":{\"Query\":{\"Version\":2,\"From\":[{\"Name\":\"c1\",\"Entity\":\"Calendar\",\"Type\":0},{\"Name\":\"d\",\"Entity\":\"Deaths\",\"Type\":0}],\"Select\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"c1\"}},\"Property\":\"Date\"},\"Name\":\"Calendar.Date\"},{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"d\"}},\"Property\":\"Deaths\"},\"Name\":\"Deaths.Deaths\"},{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"d\"}},\"Property\":\"Cumulative Deaths\"},\"Name\":\"Deaths.Cumulative Deaths\"}]},\"Binding\":{\"Primary\":{\"Groupings\":[{\"Projections\":[0,1,2]}]},\"DataReduction\":{\"DataVolume\":4,\"Primary\":{\"Sample\":{}}},\"SuppressedJoinPredicates\":[2],\"Version\":1}}}]}","QueryId":"","ApplicationContext":{"DatasetId":"bd7fc819-b88a-41d0-a830-7a8dac4576ff","Sources":[{"ReportId":"52d29698-2a1e-4f66-b0da-4260ef93d895"}]}}],"cancelQueries":[],"modelId":318337}
+    death_query = {
+        "version": "1.0.0",
+        "queries": [
+            {
+                "Query": {
+                    "Commands": [
+                        {
+                            "SemanticQueryDataShapeCommand": {
+                                "Query": {
+                                    "Version": 2,
+                                    "From": [
+                                        {"Name": "c1", "Entity": "Calendar", "Type": 0},
+                                        {"Name": "d", "Entity": "Deaths", "Type": 0},
+                                    ],
+                                    "Select": [
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {"Source": "c1"}
+                                                },
+                                                "Property": "Date",
+                                            },
+                                            "Name": "Calendar.Date",
+                                        },
+                                        # {
+                                        #     "Measure": {
+                                        #         "Expression": {
+                                        #             "SourceRef": {"Source": "d"}
+                                        #         },
+                                        #         "Property": "Deaths",
+                                        #     },
+                                        #     "Name": "Deaths.Deaths",
+                                        # },
+                                        {
+                                            "Measure": {
+                                                "Expression": {
+                                                    "SourceRef": {"Source": "d"}
+                                                },
+                                                "Property": "Cumulative Deaths",
+                                            },
+                                            "Name": "Deaths.Cumulative Deaths",
+                                        },
+                                    ],
+                                },
+                                "Binding": {
+                                    "Primary": {
+                                        "Groupings": [{"Projections": [0, 1]}]
+                                    },
+                                    "DataReduction": {
+                                        "DataVolume": 4,
+                                        "Primary": {"Sample": {}},
+                                    },
+                                    "SuppressedJoinPredicates": [2],
+                                    "Version": 1,
+                                },
+                            }
+                        }
+                    ]
+                },
+                "CacheKey": '{"Commands":[{"SemanticQueryDataShapeCommand":{"Query":{"Version":2,"From":[{"Name":"c1","Entity":"Calendar","Type":0},{"Name":"d","Entity":"Deaths","Type":0}],"Select":[{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"},"Name":"Calendar.Date"},{"Measure":{"Expression":{"SourceRef":{"Source":"d"}},"Property":"Deaths"},"Name":"Deaths.Deaths"},{"Measure":{"Expression":{"SourceRef":{"Source":"d"}},"Property":"Cumulative Deaths"},"Name":"Deaths.Cumulative Deaths"}]},"Binding":{"Primary":{"Groupings":[{"Projections":[0,1,2]}]},"DataReduction":{"DataVolume":4,"Primary":{"Sample":{}}},"SuppressedJoinPredicates":[2],"Version":1}}}]}',
+                "QueryId": "",
+                "ApplicationContext": {
+                    "DatasetId": "bd7fc819-b88a-41d0-a830-7a8dac4576ff",
+                    "Sources": [{"ReportId": "52d29698-2a1e-4f66-b0da-4260ef93d895"}],
+                },
+            }
+        ],
+        "cancelQueries": [],
+        "modelId": 318337,
+    }
 
     rsp = requests.post(
         url, params={"synchronous": True}, headers=headers, data=json.dumps(death_query)
@@ -670,14 +812,12 @@ def get_wake_data(location_key):
 
     print(json.dumps(raw))
     result_set = raw["results"][0]["result"]["data"]["dsr"]["DS"][0]["PH"][0]["DM0"]
-    cumulative_deaths = 0
     for i in result_set:
         result_list = i["C"]
-        if len(result_list) == 3:
+        if len(result_list) == 2:
             data_datetime = datetime.datetime.fromtimestamp(result_list[0] / 1000)
             date_str = data_datetime.strftime("%Y-%m-%d")
-            deaths = int(result_list[1])
-            cumulative_deaths += deaths
+            cumulative_deaths = int(result_list[1])
             results[location_key][date_str]["cases"] += 0
             results[location_key][date_str]["deaths"] += cumulative_deaths
 
