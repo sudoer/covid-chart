@@ -12,13 +12,11 @@ import pandas
 import re
 import requests
 import sys
-import urllib
 import tkinter as tk  # sudo apt-get install python3-tk
 from collections import defaultdict
 
 
 debug = False
-populations = {}
 
 
 def main():
@@ -100,14 +98,6 @@ def main():
         type=int,
         default=None,
         help="size of sliding average",
-        required=False,
-    )
-    parser.add_argument(
-        "--per",
-        dest="per",
-        type=int,
-        default=None,
-        help="graph per number of population",
         required=False,
     )
     parser.add_argument(
@@ -220,13 +210,6 @@ def read_data_and_generate_charts(args):
     state_filter = args.pop("state")
     county_filter = args.pop("county")
 
-    per_pop = args.pop("per")
-    if per_pop:
-        global populations
-        populations = get_us_population_data()
-        if debug:
-            print(json.dumps(populations))
-
     # TEXT SUMMARY
 
     if args.pop("summary"):
@@ -243,7 +226,8 @@ def read_data_and_generate_charts(args):
         filtered_index = 0
         all_locations = all_loc_data.keys()
         for unfiltered_index, location_key in enumerate(all_locations, 1):
-            country, state, county = split_location_key(location_key)
+            print(location_key)
+            country, state, county = location_key
             if country_filter and country != country_filter:
                 continue
             if state_filter and state != state_filter:
@@ -303,7 +287,7 @@ def read_data_and_generate_charts(args):
     # SINGLE CHART
 
     else:
-        generate_chart(all_loc_data, location_key, new, deaths, args, out, pop=per_pop)
+        generate_chart(all_loc_data, location_key, new, deaths, args, out)
 
 
 def get_location_string(location_key):
@@ -379,7 +363,7 @@ def summary(datadict, location_key, end_date_str, outfile=None):
 
 
 def generate_chart(
-    datadict, location_key, new, deaths, format_opts, out, pop=None, bulk=False, prefix=""
+    datadict, location_key, new, deaths, format_opts, out, bulk=False, prefix=""
 ):
 
     df = get_location_dataframe(datadict, location_key)
@@ -421,9 +405,6 @@ def generate_chart(
         series = df.deaths
     if new:
         series = series.diff()
-    if pop and location_key in populations:
-        location_pop_units = float(populations[location_key]) / float(pop)
-        series = series.div(location_pop_units)
 
     # Show moving average if we're looking at NEW cases/deaths.
     moving_average = format_opts["avg"]
@@ -444,8 +425,6 @@ def generate_chart(
     )
     title = "%s %s" % (get_location_string(location_key), basic_label)
     series_label = basic_label
-    if pop:
-        series_label += " per %d" % pop
     if moving_average:
         series_label += " (%s-day average)" % moving_average
     plt.suptitle(title, fontsize=18)
@@ -499,8 +478,8 @@ def generate_chart(
     start_date = min(df.dates)
     if format_opts["start-date"]:
         start_date = parse_date(format_opts["start-date"])
-    # By default, stop with today's data (even though it is sometimes partial).
-    end_date = parse_date("today")
+    # By default, stop with yesterday's data (last data point is usually partial).
+    end_date = parse_date("yesterday")
     if format_opts["end-date"]:
         end_date = parse_date(format_opts["end-date"])
     ax.set_xlim([start_date, end_date])
@@ -639,78 +618,9 @@ def get_wake_data(location_key):
 
     # This POST was basically copied from the "view cases by day" graph on https://covid19.wakegov.com/
     # I am pretty sure it could be trimmed a bit... it looks like overkill.
+    ## I had to update this on 08/19/2020 to fix a problem from a change on the 17th. -PB
 
-    case_query = {
-        "version": "1.0.0",
-        "queries": [
-            {
-                "Query": {
-                    "Commands": [
-                        {
-                            "SemanticQueryDataShapeCommand": {
-                                "Query": {
-                                    "Version": 2,
-                                    "From": [
-                                        {"Name": "c", "Entity": "Confirmed Cases"},
-                                        {"Name": "c1", "Entity": "Calendar"},
-                                    ],
-                                    "Select": [
-                                        {
-                                            "Measure": {
-                                                "Expression": {
-                                                    "SourceRef": {"Source": "c"}
-                                                },
-                                                "Property": "Running Total",
-                                            },
-                                            "Name": "Confirmed Cases.Count of Event ID running total in Specimen Date",
-                                        },
-                                        {
-                                            "Column": {
-                                                "Expression": {
-                                                    "SourceRef": {"Source": "c1"}
-                                                },
-                                                "Property": "Date",
-                                            },
-                                            "Name": "Calendar.Date",
-                                        },
-                                    ],
-                                    "OrderBy": [
-                                        {
-                                            "Direction": 1,
-                                            "Expression": {
-                                                "Column": {
-                                                    "Expression": {
-                                                        "SourceRef": {"Source": "c1"}
-                                                    },
-                                                    "Property": "Date",
-                                                }
-                                            },
-                                        }
-                                    ],
-                                },
-                                "Binding": {
-                                    "Primary": {"Groupings": [{"Projections": [0, 1]}]},
-                                    "DataReduction": {
-                                        "DataVolume": 4,
-                                        "Primary": {"Window": {"Count": 1000}},
-                                    },
-                                    "Version": 1,
-                                },
-                            }
-                        }
-                    ]
-                },
-                "CacheKey": '{"Commands":[{"SemanticQueryDataShapeCommand":{"Query":{"Version":2,"From":[{"Name":"c","Entity":"Confirmed Cases"},{"Name":"c1","Entity":"Calendar"}],"Select":[{"Measure":{"Expression":{"SourceRef":{"Source":"c"}},"Property":"Running Total"},"Name":"Confirmed Cases.Count of Event ID running total in Specimen Date"},{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"},"Name":"Calendar.Date"}],"OrderBy":[{"Direction":1,"Expression":{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"}}}]},"Binding":{"Primary":{"Groupings":[{"Projections":[0,1]}]},"DataReduction":{"DataVolume":4,"Primary":{"Window":{"Count":1000}}},"Version":1}}}]}',
-                "QueryId": "",
-                "ApplicationContext": {
-                    "DatasetId": "bd7fc819-b88a-41d0-a830-7a8dac4576ff",
-                    "Sources": [{"ReportId": "52d29698-2a1e-4f66-b0da-4260ef93d895"}],
-                },
-            }
-        ],
-        "cancelQueries": [],
-        "modelId": 318337,
-    }
+    case_query = {"version":"1.0.0","queries":[{"Query":{"Commands":[{"SemanticQueryDataShapeCommand":{"Query":{"Version":2,"From":[{"Name":"c1","Entity":"Calendar","Type":0},{"Name":"c","Entity":"COVID19 Cases","Type":0}],"Select":[{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"},"Name":"Calendar.Date"},{"Measure":{"Expression":{"SourceRef":{"Source":"c"}},"Property":"Confirmed Cases"},"Name":"COVID19 Cases.Confirmed Cases"},{"Measure":{"Expression":{"SourceRef":{"Source":"c"}},"Property":"Cumulative Confirmed Cases"},"Name":"COVID19 Cases.Cumulative Confirmed Cases"}]},"Binding":{"Primary":{"Groupings":[{"Projections":[0,1,2]}]},"DataReduction":{"DataVolume":4,"Primary":{"Sample":{}}},"SuppressedJoinPredicates":[2],"Version":1}}}]},"CacheKey":"{\"Commands\":[{\"SemanticQueryDataShapeCommand\":{\"Query\":{\"Version\":2,\"From\":[{\"Name\":\"c1\",\"Entity\":\"Calendar\",\"Type\":0},{\"Name\":\"c\",\"Entity\":\"COVID19 Cases\",\"Type\":0}],\"Select\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"c1\"}},\"Property\":\"Date\"},\"Name\":\"Calendar.Date\"},{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"c\"}},\"Property\":\"Confirmed Cases\"},\"Name\":\"COVID19 Cases.Confirmed Cases\"},{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"c\"}},\"Property\":\"Cumulative Confirmed Cases\"},\"Name\":\"COVID19 Cases.Cumulative Confirmed Cases\"}]},\"Binding\":{\"Primary\":{\"Groupings\":[{\"Projections\":[0,1,2]}]},\"DataReduction\":{\"DataVolume\":4,\"Primary\":{\"Sample\":{}}},\"SuppressedJoinPredicates\":[2],\"Version\":1}}}]}","QueryId":"","ApplicationContext":{"DatasetId":"bd7fc819-b88a-41d0-a830-7a8dac4576ff","Sources":[{"ReportId":"52d29698-2a1e-4f66-b0da-4260ef93d895"}]}}],"cancelQueries":[],"modelId":318337}
 
     # SET-UP
 
@@ -738,41 +648,32 @@ def get_wake_data(location_key):
     )
     raw = json.loads(rsp.content)
 
-    ## print(json.dumps(raw))
+    print(json.dumps(raw))
     result_set = raw["results"][0]["result"]["data"]["dsr"]["DS"][0]["PH"][0]["DM0"]
     for i in result_set:
         result_list = i["C"]
-        if len(result_list) == 2:
+        if len(result_list) == 3:
             data_datetime = datetime.datetime.fromtimestamp(result_list[0] / 1000)
             date_str = data_datetime.strftime("%Y-%m-%d")
-            cases = result_list[1]
+            cases = result_list[2]
             results[location_key][date_str]["cases"] += int(cases)
             results[location_key][date_str]["deaths"] += 0
 
     # DEATHS
 
-    death_query = case_query.copy()
-    death_query["queries"][0]["Query"]["Commands"][0]["SemanticQueryDataShapeCommand"][
-        "Query"
-    ]["From"][0] = {"Name": "d", "Entity": "Deaths"}
-    death_query["queries"][0]["Query"]["Commands"][0]["SemanticQueryDataShapeCommand"][
-        "Query"
-    ]["Select"][0] = {
-        "Measure": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "Deaths"},
-        "Name": "Deaths.Deaths",
-    }
+    death_query = {"version":"1.0.0","queries":[{"Query":{"Commands":[{"SemanticQueryDataShapeCommand":{"Query":{"Version":2,"From":[{"Name":"c1","Entity":"Calendar","Type":0},{"Name":"d","Entity":"Deaths","Type":0}],"Select":[{"Column":{"Expression":{"SourceRef":{"Source":"c1"}},"Property":"Date"},"Name":"Calendar.Date"},{"Measure":{"Expression":{"SourceRef":{"Source":"d"}},"Property":"Deaths"},"Name":"Deaths.Deaths"},{"Measure":{"Expression":{"SourceRef":{"Source":"d"}},"Property":"Cumulative Deaths"},"Name":"Deaths.Cumulative Deaths"}]},"Binding":{"Primary":{"Groupings":[{"Projections":[0,1,2]}]},"DataReduction":{"DataVolume":4,"Primary":{"Sample":{}}},"SuppressedJoinPredicates":[2],"Version":1}}}]},"CacheKey":"{\"Commands\":[{\"SemanticQueryDataShapeCommand\":{\"Query\":{\"Version\":2,\"From\":[{\"Name\":\"c1\",\"Entity\":\"Calendar\",\"Type\":0},{\"Name\":\"d\",\"Entity\":\"Deaths\",\"Type\":0}],\"Select\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"c1\"}},\"Property\":\"Date\"},\"Name\":\"Calendar.Date\"},{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"d\"}},\"Property\":\"Deaths\"},\"Name\":\"Deaths.Deaths\"},{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"d\"}},\"Property\":\"Cumulative Deaths\"},\"Name\":\"Deaths.Cumulative Deaths\"}]},\"Binding\":{\"Primary\":{\"Groupings\":[{\"Projections\":[0,1,2]}]},\"DataReduction\":{\"DataVolume\":4,\"Primary\":{\"Sample\":{}}},\"SuppressedJoinPredicates\":[2],\"Version\":1}}}]}","QueryId":"","ApplicationContext":{"DatasetId":"bd7fc819-b88a-41d0-a830-7a8dac4576ff","Sources":[{"ReportId":"52d29698-2a1e-4f66-b0da-4260ef93d895"}]}}],"cancelQueries":[],"modelId":318337}
 
     rsp = requests.post(
         url, params={"synchronous": True}, headers=headers, data=json.dumps(death_query)
     )
     raw = json.loads(rsp.content)
 
-    ## print(json.dumps(raw))
+    print(json.dumps(raw))
     result_set = raw["results"][0]["result"]["data"]["dsr"]["DS"][0]["PH"][0]["DM0"]
     cumulative_deaths = 0
     for i in result_set:
         result_list = i["C"]
-        if len(result_list) == 2:
+        if len(result_list) == 3:
             data_datetime = datetime.datetime.fromtimestamp(result_list[0] / 1000)
             date_str = data_datetime.strftime("%Y-%m-%d")
             deaths = int(result_list[1])
@@ -782,32 +683,6 @@ def get_wake_data(location_key):
 
     return results
 
-
-def get_us_population_data():
-    url = "https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv"
-    filename = "co-est2019-alldata.csv"
-    if not os.path.isfile(filename):
-        print("downloading %s" % filename)
-        response = urllib.request.urlopen(url)
-        data = response.read()
-        file_ptr = open(filename, 'w')
-        file_ptr.write(data)
-        file_ptr.close()
-    location_population = {}
-    with open(filename) as csv_file_obj:
-        print("reading %s" % filename)
-        csv_dict_reader = csv.DictReader(csv_file_obj)
-        for row in csv_dict_reader:
-            state = row.get('STNAME')
-            county = row.get('CTYNAME', '')
-            if state == county:
-                county = None
-            else:
-                county = county.replace(' County', '').replace(' Parish', '')
-            population = row.get('POPESTIMATE2019')
-            location_key = join_location_key('US', state, county)
-            location_population[location_key] = population
-    return location_population
 
 if __name__ == "__main__":
     main()
