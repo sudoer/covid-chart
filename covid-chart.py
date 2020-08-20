@@ -728,8 +728,8 @@ def get_wake_data(location_key):
         if len(result_list) == 3:
             data_datetime = datetime.datetime.fromtimestamp(result_list[0] / 1000)
             date_str = data_datetime.strftime("%Y-%m-%d")
-            cases = result_list[2]
-            results[location_key][date_str]["cases"] += int(cases)
+            cumulative_cases = result_list[2]
+            results[location_key][date_str]["cases"] += int(cumulative_cases)
             results[location_key][date_str]["deaths"] += 0
 
     # DEATHS
@@ -820,6 +820,15 @@ def get_wake_data(location_key):
             cumulative_deaths = int(result_list[1])
             results[location_key][date_str]["cases"] += 0
             results[location_key][date_str]["deaths"] += cumulative_deaths
+
+    # Fill in the "zeros" in the middle of the data using previous day's data.
+    last_date = None
+    for date_str in results[location_key]:
+        if results[location_key][date_str]["cases"] == 0 and last_date is not None:
+            results[location_key][date_str]["cases"] = results[location_key][last_date]["cases"]
+        if results[location_key][date_str]["deaths"] == 0 and last_date is not None:
+            results[location_key][date_str]["deaths"] = results[location_key][last_date]["deaths"]
+        last_date = date_str
 
     return results
 
