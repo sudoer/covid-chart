@@ -327,13 +327,14 @@ def get_location_dataframe(datadict, location_index):
     location_data = datadict.get(location_index)
     if not location_data:
         return None
+    date_strs = sorted(location_data.keys())
     return pandas.DataFrame(
         data={
             "dates": [
-                datetime.date.fromisoformat(date_str) for date_str in location_data
+                datetime.date.fromisoformat(date_str) for date_str in date_strs
             ],
-            "cases": [location_data[date_str]["cases"] for date_str in location_data],
-            "deaths": [location_data[date_str]["deaths"] for date_str in location_data],
+            "cases": [location_data[date_str]["cases"] for date_str in date_strs],
+            "deaths": [location_data[date_str]["deaths"] for date_str in date_strs],
         }
     )
 
@@ -823,7 +824,7 @@ def get_wake_data(location_key):
 
     # Fill in the "zeros" in the middle of the data using previous day's data.
     last_date = None
-    for date_str in results[location_key]:
+    for date_str in sorted(results[location_key]):
         if results[location_key][date_str]["cases"] == 0 and last_date is not None:
             results[location_key][date_str]["cases"] = results[location_key][last_date]["cases"]
         if results[location_key][date_str]["deaths"] == 0 and last_date is not None:
