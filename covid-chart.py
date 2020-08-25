@@ -39,12 +39,7 @@ def main():
     # DATA SELECTION OPTIONS
 
     parser.add_argument(
-        "--new",
-        dest="new",
-        action="store_true",
-        default=False,
-        help="new cases",
-        required=False,
+        "--new", dest="new", action="store_true", default=False, help="new cases", required=False
     )
     parser.add_argument(
         "--deaths",
@@ -55,24 +50,28 @@ def main():
         required=False,
     )
     parser.add_argument(
-        "--country",
-        dest="country",
+        "--filters",
+        dest="filters",
         default=None,
-        help="country (JHU data only)",
+        help="a file containing filters, same format as --locations",
         required=False,
     )
     parser.add_argument(
-        "--state",
-        dest="state",
-        default=None,
-        help="US state (JHU data only)",
-        required=False,
+        "--country", dest="country", default=None, help="country (JHU data only)", required=False
     )
     parser.add_argument(
-        "--county",
-        dest="county",
-        default=None,
-        help="US county (JHU data only)",
+        "--state", dest="state", default=None, help="US state (JHU data only)", required=False
+    )
+    parser.add_argument(
+        "--county", dest="county", default=None, help="US county (JHU data only)", required=False
+    )
+    parser.add_argument(
+        "--recursive",
+        "-r",
+        dest="recursive",
+        action="store_true",
+        default=False,
+        help="include all sub-divisions beneath those given",
         required=False,
     )
     parser.add_argument(
@@ -93,12 +92,7 @@ def main():
     # CHART OPTIONS
 
     parser.add_argument(
-        "--avg",
-        dest="avg",
-        type=int,
-        default=None,
-        help="size of sliding average",
-        required=False,
+        "--avg", dest="avg", type=int, default=None, help="size of sliding average", required=False
     )
     parser.add_argument(
         "--log",
@@ -154,12 +148,7 @@ def main():
         required=False,
     )
     parser.add_argument(
-        "--dpi",
-        dest="dpi",
-        type=int,
-        default=None,
-        help="dots per inch",
-        required=False,
+        "--dpi", dest="dpi", type=int, default=None, help="dots per inch", required=False
     )
 
     # DEBUG
@@ -185,109 +174,102 @@ def read_data_and_generate_charts(args):
     all_loc_data = None
     location_key = None
 
+    # CHART FILTERS
+
+    country_filter = args.pop("country")
+    state_filter = args.pop("state")
+    county_filter = args.pop("county")
+    recursive = args.pop("recursive")
+
     # DATA SOURCES
 
     source = args.pop("source")
     if source == "wake":
-        location_key = join_location_key("US", "North Carolina", "Wake")
+        # over-ride filters - wake source only has wake data
+        country_filter = "US"
+        state_filter = "North Carolina"
+        county_filter = "Wake"
+        location_key = join_location_key(country_filter, state_filter, county_filter)
         all_loc_data = get_wake_data(location_key)
     elif source == "jhu":
-        # We'll set location_key here, assuming we're going to make a single chart.
-        location_key = join_location_key(args["country"], args["state"], args["county"])
         all_loc_data = get_jhu_data(args.pop("jhu-data-dir"))
     else:
         exit_on_error("unknown source '%s'" % source)
 
     if debug:
+        print("all location data:")
         print(json.dumps(all_loc_data))
+        print("")
 
-    # CHART FILTERS AND OPTIONS
+    # COMPILE A LIST OF LOCATIONS THAT WE'RE INTERESTED IN
+
+    filtered_locations = filter_locations(
+        all_loc_data, country_filter, state_filter, county_filter, recursive
+    )
+    # TODO - if a filter file is given, run filter_locations on each line of that file, add to filtered_locations
+
+    # CHART OPTIONS
 
     new = args.pop("new")
     deaths = args.pop("deaths")
     out = args.pop("out")
-    country_filter = args.pop("country")
-    state_filter = args.pop("state")
-    county_filter = args.pop("county")
 
     # TEXT SUMMARY
 
     if args.pop("summary"):
         summary(all_loc_data, location_key, args["end-date"])
     elif args.pop("locations"):
-        for location_string in sorted(
-            ["%s;%s;%s" % loc for loc in all_loc_data.keys()]
-        ):
-            print(location_string)
+        location_strings = []
+        for location_key in sorted(all_loc_data.keys()):
+            print(location_key)
 
-    # BULK PROCESSING OF ALL CHARTS
+    # BULK PROCESSING OF ALL CHARTS MATCHING THE FILTERS
 
     elif args.pop("bulk"):
-        filtered_index = 0
-        all_locations = all_loc_data.keys()
-        for unfiltered_index, location_key in enumerate(all_locations, 1):
-            print(location_key)
-            country, state, county = location_key
-            if country_filter and country != country_filter:
-                continue
-            if state_filter and state != state_filter:
-                continue
-            if county_filter and county != county_filter:
-                continue
-            filtered_index += 1
-            prefix = "#%d (location %d of %d)" % (
-                filtered_index,
-                unfiltered_index,
-                len(all_locations),
-            )
-            generate_chart(
-                all_loc_data,
-                location_key,
-                True,
-                True,
-                args,
-                out,
-                bulk=True,
-                prefix=prefix,
-            )
-            generate_chart(
-                all_loc_data,
-                location_key,
-                True,
-                False,
-                args,
-                out,
-                bulk=True,
-                prefix=prefix,
-            )
-            generate_chart(
-                all_loc_data,
-                location_key,
-                False,
-                True,
-                args,
-                out,
-                bulk=True,
-                prefix=prefix,
-            )
-            generate_chart(
-                all_loc_data,
-                location_key,
-                False,
-                False,
-                args,
-                out,
-                bulk=True,
-                prefix=prefix,
-            )
-            summary_fullpath = build_full_file_path(out, location_key, "summary.txt")
-            print("%s %s" % (prefix, summary_fullpath))
-            summary(all_loc_data, location_key, args["end-date"], summary_fullpath)
+        for index, location_key in enumerate(filtered_locations, 1):
+            country, state, county = split_location_key(location_key)
+            prefix = "location %d of %d" % (index, len(filtered_locations))
+            generate_chart_variants(all_loc_data, location_key, args, out, prefix=prefix)
 
-    # SINGLE CHART
+    # SINGLE CHART - FILTERS SHOULD NARROW IT DOWN TO A SINGLE LOCATION
 
     else:
+        if len(filtered_locations) != 1:
+            exit_on_error(
+                "ambiguous filters for on-screen graph, matches %s locations"
+                % len(filtered_locations)
+            )
+        # There is only one location in filtered_locations, graph the first and only one.
+        location_key = filtered_locations[0]
         generate_chart(all_loc_data, location_key, new, deaths, args, out)
+
+
+def filter_locations(all_loc_data, country_filter, state_filter, county_filter, recursive):
+    all_locations = all_loc_data.keys()
+    filtered_locations = []
+    for index, location_key in enumerate(all_locations, 1):
+        country, state, county = split_location_key(location_key)
+        # Discard any locations that MIS-match our filters.
+        if country_filter and country != country_filter:
+            continue
+        if state_filter and state != state_filter:
+            continue
+        if county_filter and county != county_filter:
+            continue
+        # This location_key is within the given filters.
+        if not recursive:
+            if country != country_filter:
+                continue
+            if state != state_filter:
+                continue
+            if county != county_filter:
+                continue
+        if debug:
+            print(
+                "location #%d of %d %s matches filters" % (index, len(all_locations), location_key)
+            )
+        filtered_locations.append(location_key)
+    return filtered_locations
 
 
 def get_location_string(location_key):
@@ -318,21 +300,17 @@ def build_full_file_path(top_dir, location_key, filename):
     country = re.sub("[^0-9a-zA-Z]+", "_", (country or "").lower()).strip("_")
     state = re.sub("[^0-9a-zA-Z]+", "_", (state or "").lower()).strip("_")
     county = re.sub("[^0-9a-zA-Z]+", "_", (county or "").lower()).strip("_")
-    return "/".join(
-        [x for x in filter(None, (top_dir, country, state, county, filename))]
-    )
+    return "/".join([x for x in filter(None, (top_dir, country, state, county, filename))])
 
 
-def get_location_dataframe(datadict, location_index):
-    location_data = datadict.get(location_index)
+def get_location_dataframe(datadict, location_data_index):
+    location_data = datadict.get(location_data_index)
     if not location_data:
         return None
     date_strs = sorted(location_data.keys())
     return pandas.DataFrame(
         data={
-            "dates": [
-                datetime.date.fromisoformat(date_str) for date_str in date_strs
-            ],
+            "dates": [datetime.date.fromisoformat(date_str) for date_str in date_strs],
             "cases": [location_data[date_str]["cases"] for date_str in date_strs],
             "deaths": [location_data[date_str]["deaths"] for date_str in date_strs],
         }
@@ -363,13 +341,23 @@ def summary(datadict, location_key, end_date_str, outfile=None):
         print(output)
 
 
-def generate_chart(
-    datadict, location_key, new, deaths, format_opts, out, bulk=False, prefix=""
-):
+def generate_chart_variants(all_loc_data, location_key, args, out, prefix):
+    # Generate charts for new deaths, new cases, cumulative deaths, cumulative cases.
+    generate_chart(all_loc_data, location_key, True, True, args, out, bulk=True, prefix=prefix)
+    generate_chart(all_loc_data, location_key, True, False, args, out, bulk=True, prefix=prefix)
+    generate_chart(all_loc_data, location_key, False, True, args, out, bulk=True, prefix=prefix)
+    generate_chart(all_loc_data, location_key, False, False, args, out, bulk=True, prefix=prefix)
+    # Generate summary text.
+    summary_fullpath = build_full_file_path(out, location_key, "summary.txt")
+    print("%s %s" % (prefix, summary_fullpath))
+    summary(all_loc_data, location_key, args["end-date"], summary_fullpath)
+
+
+def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=False, prefix=""):
 
     df = get_location_dataframe(datadict, location_key)
     if df is None:
-        return False
+        exit_on_error("data frame was empty")
 
     # display size
     if format_opts["inches"]:
@@ -420,10 +408,7 @@ def generate_chart(
         avg_color = "black"
 
     # Title and labels
-    basic_label = "%s %s" % (
-        "new" if new else "cumulative",
-        "deaths" if deaths else "cases",
-    )
+    basic_label = "%s %s" % ("new" if new else "cumulative", "deaths" if deaths else "cases")
     title = "%s %s" % (get_location_string(location_key), basic_label)
     series_label = basic_label
     if moving_average:
@@ -633,36 +618,26 @@ def get_wake_data(location_key):
                                     "Version": 2,
                                     "From": [
                                         {"Name": "c1", "Entity": "Calendar", "Type": 0},
-                                        {
-                                            "Name": "c",
-                                            "Entity": "COVID19 Cases",
-                                            "Type": 0,
-                                        },
+                                        {"Name": "c", "Entity": "COVID19 Cases", "Type": 0},
                                     ],
                                     "Select": [
                                         {
                                             "Column": {
-                                                "Expression": {
-                                                    "SourceRef": {"Source": "c1"}
-                                                },
+                                                "Expression": {"SourceRef": {"Source": "c1"}},
                                                 "Property": "Date",
                                             },
                                             "Name": "Calendar.Date",
                                         },
                                         {
                                             "Measure": {
-                                                "Expression": {
-                                                    "SourceRef": {"Source": "c"}
-                                                },
+                                                "Expression": {"SourceRef": {"Source": "c"}},
                                                 "Property": "Confirmed Cases",
                                             },
                                             "Name": "COVID19 Cases.Confirmed Cases",
                                         },
                                         {
                                             "Measure": {
-                                                "Expression": {
-                                                    "SourceRef": {"Source": "c"}
-                                                },
+                                                "Expression": {"SourceRef": {"Source": "c"}},
                                                 "Property": "Cumulative Confirmed Cases",
                                             },
                                             "Name": "COVID19 Cases.Cumulative Confirmed Cases",
@@ -670,13 +645,8 @@ def get_wake_data(location_key):
                                     ],
                                 },
                                 "Binding": {
-                                    "Primary": {
-                                        "Groupings": [{"Projections": [0, 1, 2]}]
-                                    },
-                                    "DataReduction": {
-                                        "DataVolume": 4,
-                                        "Primary": {"Sample": {}},
-                                    },
+                                    "Primary": {"Groupings": [{"Projections": [0, 1, 2]}]},
+                                    "DataReduction": {"DataVolume": 4, "Primary": {"Sample": {}}},
                                     "SuppressedJoinPredicates": [2],
                                     "Version": 1,
                                 },
@@ -752,9 +722,7 @@ def get_wake_data(location_key):
                                     "Select": [
                                         {
                                             "Column": {
-                                                "Expression": {
-                                                    "SourceRef": {"Source": "c1"}
-                                                },
+                                                "Expression": {"SourceRef": {"Source": "c1"}},
                                                 "Property": "Date",
                                             },
                                             "Name": "Calendar.Date",
@@ -770,9 +738,7 @@ def get_wake_data(location_key):
                                         # },
                                         {
                                             "Measure": {
-                                                "Expression": {
-                                                    "SourceRef": {"Source": "d"}
-                                                },
+                                                "Expression": {"SourceRef": {"Source": "d"}},
                                                 "Property": "Cumulative Deaths",
                                             },
                                             "Name": "Deaths.Cumulative Deaths",
@@ -780,13 +746,8 @@ def get_wake_data(location_key):
                                     ],
                                 },
                                 "Binding": {
-                                    "Primary": {
-                                        "Groupings": [{"Projections": [0, 1]}]
-                                    },
-                                    "DataReduction": {
-                                        "DataVolume": 4,
-                                        "Primary": {"Sample": {}},
-                                    },
+                                    "Primary": {"Groupings": [{"Projections": [0, 1]}]},
+                                    "DataReduction": {"DataVolume": 4, "Primary": {"Sample": {}}},
                                     "SuppressedJoinPredicates": [2],
                                     "Version": 1,
                                 },
