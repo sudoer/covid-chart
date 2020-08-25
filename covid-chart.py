@@ -211,6 +211,7 @@ def read_data_and_generate_charts(args):
         filtered_locations = filter_locations_by_costco(
             all_loc_data, country_filter, state_filter, county_filter, recursive
         )
+    filtered_locations = sorted(filtered_locations)
 
     # CHART OPTIONS
 
