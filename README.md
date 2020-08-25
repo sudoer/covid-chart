@@ -70,3 +70,18 @@ installed globally on your system.
 * `./covid-chart.py --new --country=US --bulk --out=us-charts` will produce 5 files:
     + (4 graphs and a summary) for the entire US
 
+## reading multiple filters from a file
+* To graph several combinations of filters in one bulk operation, put your filters in a file.
+* Format is the same as the output of `./covid-chart.py --locations`
+* For example, make a file called "locations" containing:
+
+    Norway|*|*
+    United Kingdom|England|*
+    United Kingdom|Scotland|*
+    US|*|*
+    Japan|*|*
+
+* Then run `./covid-chart.py --new --filters=locations --bulk --out=5countries` to get charts for the 5 countries.
+* Or run `./covid-chart.py --new --filters=locations --bulk --out=5countries --recursive` to get charts for all states and counties within those.
+
+

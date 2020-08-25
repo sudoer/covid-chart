@@ -50,13 +50,6 @@ def main():
         required=False,
     )
     parser.add_argument(
-        "--filters",
-        dest="filters",
-        default=None,
-        help="a file containing filters, same format as --locations",
-        required=False,
-    )
-    parser.add_argument(
         "--country", dest="country", default=None, help="country (JHU data only)", required=False
     )
     parser.add_argument(
@@ -64,6 +57,13 @@ def main():
     )
     parser.add_argument(
         "--county", dest="county", default=None, help="US county (JHU data only)", required=False
+    )
+    parser.add_argument(
+        "--filters",
+        dest="filters",
+        default=None,
+        help="a file containing filters, same format as --locations",
+        required=False,
     )
     parser.add_argument(
         "--recursive",
@@ -203,10 +203,14 @@ def read_data_and_generate_charts(args):
 
     # COMPILE A LIST OF LOCATIONS THAT WE'RE INTERESTED IN
 
-    filtered_locations = filter_locations(
-        all_loc_data, country_filter, state_filter, county_filter, recursive
-    )
-    # TODO - if a filter file is given, run filter_locations on each line of that file, add to filtered_locations
+    filter_file = args.get("filters")
+    if filter_file:
+        # if a filter file is given, run filter_locations on each line of that file, add to filtered_locations
+        filtered_locations = filter_locations_from_file(all_loc_data, args.get("filters"), recursive)
+    else:
+        filtered_locations = filter_locations_by_costco(
+            all_loc_data, country_filter, state_filter, county_filter, recursive
+        )
 
     # CHART OPTIONS
 
@@ -244,7 +248,8 @@ def read_data_and_generate_charts(args):
         generate_chart(all_loc_data, location_key, new, deaths, args, out)
 
 
-def filter_locations(all_loc_data, country_filter, state_filter, county_filter, recursive):
+def filter_locations_by_costco(all_loc_data, country_filter, state_filter, county_filter, recursive):
+    # costco = country, state, county filters
     all_locations = all_loc_data.keys()
     filtered_locations = []
     for index, location_key in enumerate(all_locations, 1):
@@ -269,6 +274,21 @@ def filter_locations(all_loc_data, country_filter, state_filter, county_filter, 
                 "location #%d of %d %s matches filters" % (index, len(all_locations), location_key)
             )
         filtered_locations.append(location_key)
+    return filtered_locations
+
+
+def filter_locations_from_file(all_loc_data, filter_file, recursive):
+    filtered_locations = []
+    if not filter_file:
+        return filtered_locations
+    with open(filter_file) as filter_file_obj:
+        for linenum, line in enumerate(filter_file_obj, 1):
+            location_key = line.strip()
+            if debug:
+                print("filter file line %d: %s" % (linenum, location_key))
+            if location_key:
+                country, state, county = split_location_key(location_key)
+                filtered_locations.extend(filter_locations_by_costco(all_loc_data, country, state, county, recursive))
     return filtered_locations
 
 
@@ -591,11 +611,11 @@ def get_jhu_data(git_root):
                         # location_key = join_location_key(*country_state_county)
                         results[location_key][date_str]["cases"] += csv_cases
                         results[location_key][date_str]["deaths"] += csv_deaths
-                        if debug:
-                            print(
-                                "date=%s, location=%s, cases=%d, deaths=%d"
-                                % (date_str, location_key, csv_cases, csv_deaths)
-                            )
+                        # if debug:
+                        #     print(
+                        #         "date=%s, location=%s, cases=%d, deaths=%d"
+                        #         % (date_str, location_key, csv_cases, csv_deaths)
+                        #     )
 
     return results
 
