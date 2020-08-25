@@ -28,63 +28,45 @@ installed globally on your system.
 
 # usage
 
-## graphing Wake County data
+## 3 levels of location data: country, state, county
+* `./covid-chart.py --country=US --state='North Carolina' --county=Forsyth`
+* `./covid-chart.py --country=US --state='North Carolina' --county=Wake`
+* `./covid-chart.py --country=US --state='North Carolina'`
+* `./covid-chart.py --country=US`
+* `./covid-chart.py --country=Japan`
+* `./covid-chart.py --country=Japan --state=Hokkaido`
 
-* cumulative cases: `./covid-chart.py --source=wake`
-* new cases: `./covid-chart.py --source=wake --new`
-* logarithmic chart: `./covid-chart.py --source=wake --log`
-* custom moving average: `./covid-chart.py --source=wake --avg=10`
+## 4 graph options: new-vs-cumulative, cases-vs-deaths:
+* `./covid-chart.py --country=US --state='North Carolina' --county=Wake`
+* `./covid-chart.py --country=US --state='North Carolina' --county=Wake --new`
+* `./covid-chart.py --country=US --state='North Carolina' --county=Wake --deaths`
+* `./covid-chart.py --country=US --state='North Carolina' --county=Wake --new --deaths`
 
 ## graphing JHU data
+* Johns Hopkins University is the default source.
+* source can be specified or omitted
+* `./covid-chart.py --source=jhu --country=US --state='North Carolina' --county=Wake`
 
-* a state: `./covid-chart.py --source=jhu --country=US --state='North Carolina'`
-* a county: `./covid-chart.py --source=jhu --country=US --state='North Carolina' --county=Wake`
-* JHU is default source: `./covid-chart.py --country=US --state='North Carolina' --county=Wake`
+## getting source data from Wake County DHHS
+* Wake source MUST be specified (because the default source is JHU)
+* `./covid-chart.py --source=wake`
+* Using `--source=wake` implies `--country=US` and `--state='North Carolina'` and `--county=Wake`
+
+## graph options
+* logarithmic chart: `./covid-chart.py --source=wake --log`
+* custom moving average: `./covid-chart.py --source=wake --avg=10`
+* size: `./covid-chart.py --source=wake --dpi=120 --inches=10x8`
+* output to a file: `./covid-chart.py --source=wake --dpi=120 --inches=10x8 --out=wake.png`
 
 ## bulk
-
-This combination will produce 510 files:
-* 100 counties X (4 graphs and a summary)
-* "NC unassigned" (like a county) X (4 graphs and a summary)
-* (4 graphs and a summary) for the entire state
-
-    ./covid-chart.py --bulk --country=US --state=North\ Carolina --out=test
-
-
-## combine all of the arguments
-
-    $ ./covid-chart.py --help
-    usage: covid-chart.py [-h] [--source SOURCE] [--jhu-data-dir JHU-DATA-DIR]
-                          [--new] [--deaths] [--country COUNTRY] [--state STATE]
-                          [--county COUNTY] [--start-date START-DATE]
-                          [--end-date END-DATE] [--avg AVG] [--log] [--summary]
-                          [--locations] [--bulk] [--out OUT] [--inches INCHES]
-                          [--dpi DPI]
-    
-    COVID-19 grapher
-    
-    optional arguments:
-      -h, --help            show this help message and exit
-      --source SOURCE       jhu or wake
-      --jhu-data-dir JHU-DATA-DIR
-                            name of JHU git directory
-      --new                 new cases
-      --deaths              graph deaths rather than cases
-      --country COUNTRY     country (JHU data only)
-      --state STATE         US state (JHU data only)
-      --county COUNTY       US county (JHU data only)
-      --start-date START-DATE
-                            start-date (YYYY-MM-DD)
-      --end-date END-DATE   start-date (YYYY-MM-DD)
-      --avg AVG             size of sliding average
-      --log                 logarithmic scale
-      --summary             print summary of latest information to stdout
-      --locations           print list of valid combinations of country, state,
-                            county
-      --bulk                output option: save all data as PNGs using default
-                            filenames
-      --out OUT             output option: save one graph to file with this
-                            filename
-      --inches INCHES       size in inches (WWxHH)
-      --dpi DPI             dots per inch
+* The `--recursive` option expands a country to include all states, or a state to include all counties.
+* Used with filters, you can specify any combination that you want.
+* `./covid-chart.py --new --country=US --state=North\ Carolina --bulk --recursive --out=nc-charts` will produce 510 files:
+    + (4 graphs and a summary) for each of 100 counties
+    + (4 graphs and a summary) for "NC unassigned" (included in the JHU data like a county)
+    + (4 graphs and a summary) for the entire state
+* `./covid-chart.py --new --country=US --state=North\ Carolina --county-Wake --bulk --out=nc-charts` will produce 5 files:
+    + (4 graphs and a summary) for Wake county
+* `./covid-chart.py --new --country=US --bulk --out=us-charts` will produce 5 files:
+    + (4 graphs and a summary) for the entire US
 
