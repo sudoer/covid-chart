@@ -75,11 +75,11 @@ installed globally on your system.
 * Format is the same as the output of `./covid-chart.py --locations`
 * For example, make a file called "locations" containing:
 
-    Norway|*|*
-    United Kingdom|England|*
-    United Kingdom|Scotland|*
-    US|*|*
-    Japan|*|*
+        Norway|*|*
+        United Kingdom|England|*
+        United Kingdom|Scotland|*
+        US|*|*
+        Japan|*|*
 
 * Then run `./covid-chart.py --new --filters=locations --bulk --out=5countries` to get charts for the 5 countries.
 * Or run `./covid-chart.py --new --filters=locations --bulk --out=5countries --recursive` to get charts for all states and counties within those.
