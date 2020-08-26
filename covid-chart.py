@@ -250,6 +250,8 @@ def read_data_and_generate_charts(args):
         generate_chart(all_loc_data, location_key, new, deaths, args, out)
 
 
+# ----- LOCATIONS - FILTERING -----
+
 def filter_locations_by_costco(all_loc_data, country_filter, state_filter, county_filter, recursive):
     # costco = country, state, county filters
     all_locations = all_loc_data.keys()
@@ -294,6 +296,8 @@ def filter_locations_from_file(all_loc_data, filter_file, recursive):
     return filtered_locations
 
 
+# ----- LOCATIONS - SPLITTING, JOINING AND FORMATTING -----
+
 def get_location_string(location_key):
     country, state, county = split_location_key(location_key)
     if county:
@@ -324,6 +328,8 @@ def build_full_file_path(top_dir, location_key, filename):
     county = re.sub("[^0-9a-zA-Z]+", "_", (county or "").lower()).strip("_")
     return "/".join([x for x in filter(None, (top_dir, country, state, county, filename))])
 
+
+# ----- CHARTING THE DATA -----
 
 def get_location_dataframe(datadict, location_data_index):
     location_data = datadict.get(location_data_index)
@@ -515,6 +521,8 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
     plt.close("all")
 
 
+# ----- UTILITY FUNCTIONS -----
+
 def exit_on_error(string):
     print(string)
     sys.exit(1)
@@ -533,6 +541,8 @@ def parse_date(date_string):
         return dt.date()
     return None
 
+
+# ----- DATA SOURCES -----
 
 def get_jhu_data(git_root):
 
