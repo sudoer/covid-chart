@@ -222,6 +222,7 @@ def read_data_and_generate_charts(args):
     # TEXT SUMMARY
 
     if args.pop("summary"):
+        location_key = join_location_key(country_filter, state_filter, county_filter)
         summary(all_loc_data, location_key, args["end-date"])
     elif args.pop("locations"):
         location_strings = []
