@@ -713,7 +713,8 @@ def get_wake_data(location_key):
     )
     raw = json.loads(rsp.content)
 
-    print(json.dumps(raw))
+    if debug:
+        print(json.dumps(raw))
     result_set = raw["results"][0]["result"]["data"]["dsr"]["DS"][0]["PH"][0]["DM0"]
     for i in result_set:
         result_list = i["C"]
@@ -793,7 +794,8 @@ def get_wake_data(location_key):
     )
     raw = json.loads(rsp.content)
 
-    print(json.dumps(raw))
+    if debug:
+        print(json.dumps(raw))
     result_set = raw["results"][0]["result"]["data"]["dsr"]["DS"][0]["PH"][0]["DM0"]
     for i in result_set:
         result_list = i["C"]
