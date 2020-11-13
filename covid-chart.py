@@ -501,7 +501,8 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
 
     # Y limits
     ylim = ax.get_ylim()
-    ax.set_ylim([0, ylim[1]])
+    if not format_opts["log"]:
+        ax.set_ylim([0, ylim[1]])
 
     if bulk:
         png_filename = "%s-%s.png" % (
