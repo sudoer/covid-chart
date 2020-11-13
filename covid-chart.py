@@ -409,7 +409,8 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
     # Y axis can be linear or logarithmic
     if format_opts["log"]:
         ax.set_yscale("log")
-    ax.ticklabel_format(axis="y", style="plain")
+    else:
+        ax.ticklabel_format(axis="y", style="plain")
 
     # And a corresponding grid
     ## ax.grid(which="both")
