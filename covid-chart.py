@@ -16,6 +16,7 @@ import tkinter as tk  # sudo apt-get install python3-tk
 from collections import defaultdict
 
 
+# for interactive debugging, add `import pdb; pdb.set_trace()` at a break point
 debug = False
 
 
@@ -501,12 +502,34 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
 
     # Y limits
     if not format_opts["log"]:
+        # Look for spikes... ignore them if they are too spiky.
         highest1, highest2 = series.nlargest(2)
+        if debug:
+            print("highest1 = %d, highest2 = %d" % (highest1, highest2))
+        # If the highest value is within 25% of the values on either side, then it's not a spike.
+        maxjump = 1.25
+        index1 = series.idxmax()
+        spike = True
+        if index1 == len(series):
+            if debug:
+                print("index1 %d is the last entry, not a spike" % index1)
+            spike = False
+        elif index1 > 1 and highest1 < maxjump * series[index1-1]:
+            if debug:
+                print("highest1 < %.f * %d [at posn -1], not a spike" % (maxjump, series[index1-1]))
+            spike = False
+        elif index1 < len(series) - 1 and highest1 < maxjump * series[index1+1]:
+            if debug:
+                print("highest1 < %.f * %d [at posn +1], setting ymax = %d" % (maxjump, series[index1+1]))
+            spike = False
+        # If the highest value is within 25% of the second-highest value, then it's not a spike.
+        elif highest1 < maxjump * highest2:
+            spike = False
+        # Use the highest -- or maybe second-highest -- value as ymax.
         ymax = highest1
-        # detect a single "spike" (usually a catch-up day)
-        # adjust max height to the "normal" peak, not the spike
-        if highest1 / highest2 > 1.1:
+        if spike:
             ymax = highest2
+        # Leave a little margin at the top.
         ax.set_ylim([0, ymax*1.05])
 
     if bulk:
