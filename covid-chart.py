@@ -503,7 +503,10 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
     # Y limits
     if not format_opts["log"]:
         # Look for spikes... ignore them if they are too spiky.
-        highest1, highest2 = series.nlargest(2)
+        try:
+            highest1, highest2 = series.nlargest(2)
+        except ValueError:
+            highest1 = highest2 = 0
         if debug:
             print("highest1 = %d, highest2 = %d" % (highest1, highest2))
         # If the highest value is within 25% of the values on either side, then it's not a spike.
