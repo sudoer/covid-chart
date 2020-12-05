@@ -506,7 +506,7 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
         try:
             highest1, highest2 = series.nlargest(2)
         except ValueError:
-            highest1 = highest2 = 0
+            highest1 = highest2 = 1
         if debug:
             print("highest1 = %d, highest2 = %d" % (highest1, highest2))
         # If the highest value is within 25% of the values on either side, then it's not a spike.
