@@ -500,9 +500,14 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
     ax.set_xlim([start_date, end_date])
 
     # Y limits
-    ylim = ax.get_ylim()
     if not format_opts["log"]:
-        ax.set_ylim([0, ylim[1]])
+        highest1, highest2 = series.nlargest(2)
+        ymax = highest1
+        # detect a single "spike" (usually a catch-up day)
+        # adjust max height to the "normal" peak, not the spike
+        if highest1 / highest2 > 1.1:
+            ymax = highest2
+        ax.set_ylim([0, ymax*1.05])
 
     if bulk:
         png_filename = "%s-%s.png" % (
