@@ -493,8 +493,8 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
     start_date = min(df.dates)
     if format_opts["start-date"]:
         start_date = parse_date(format_opts["start-date"])
-    # By default, stop with yesterday's data (last data point is usually partial).
-    end_date = parse_date("yesterday")
+    # By default, stop with today's data (even though a lot of times, it is incomplete).
+    end_date = parse_date("today")
     if format_opts["end-date"]:
         end_date = parse_date(format_opts["end-date"])
     ax.set_xlim([start_date, end_date])
