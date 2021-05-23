@@ -197,10 +197,11 @@ def read_data_and_generate_charts(args):
     else:
         exit_on_error("unknown source '%s'" % source)
 
-    if debug:
-        print("all location data:")
-        print(json.dumps(all_loc_data))
-        print("")
+    # This amount of debugging is absurd.
+    ## if debug:
+    ##     print("all location data:")
+    ##     print(json.dumps(all_loc_data))
+    ##     print("")
 
     # COMPILE A LIST OF LOCATIONS THAT WE'RE INTERESTED IN
 
@@ -384,8 +385,8 @@ def generate_chart_variants(all_loc_data, location_key, args, out, prefix):
 
 def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=False, prefix=""):
 
-    df = get_location_dataframe(datadict, location_key)
-    if df is None:
+    df1 = get_location_dataframe(datadict, location_key)
+    if df1 is None:
         exit_on_error("data frame was empty")
 
     # display size
@@ -418,12 +419,33 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
     ax.grid(which="minor", alpha=0.2)
     ax.grid(which="major", alpha=0.5)
 
+    # X limits
+    # By default, start with the first recorded data.
+    start_date = min(df1.dates)
+    if format_opts["start-date"]:
+        start_date = parse_date(format_opts["start-date"])
+    # By default, stop with today's data (even though a lot of times, it is incomplete).
+    end_date = parse_date("today")
+    if format_opts["end-date"]:
+        end_date = parse_date(format_opts["end-date"])
+    ax.set_xlim([start_date, end_date])
+
     # Which data do we graph
-    series = df.cases
+    df2 = df1[(df1.dates >= start_date) & (df1.dates <= end_date)]
+    if df2 is None:
+        exit_on_error("data frame was empty (for the time period)")
+    series = df2.cases
     if deaths:
-        series = df.deaths
+        series = df2.deaths
     if new:
         series = series.diff()
+
+    if debug:
+        pandas.set_option("display.max_rows", None, "display.max_columns", None)
+        print('unfiltered data:')
+        print(df1)
+        print('data filtered by date range (%s ~ %s):' % (start_date, end_date))
+        print(df2)
 
     # Show moving average if we're looking at NEW cases/deaths.
     moving_average = format_opts["avg"]
@@ -458,7 +480,7 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
 
     if bar_chart:
         plt.bar(
-            df.dates,
+            df2.dates,
             series,
             width=0.8,
             bottom=None,
@@ -468,7 +490,7 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
         )
     else:
         plt.plot_date(
-            df.dates,
+            df2.dates,
             series,
             xdate=True,
             ydate=False,
@@ -478,7 +500,7 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
         )
     if moving_average:
         plt.plot_date(
-            df.dates,
+            df2.dates,
             series.rolling(window=moving_average).mean(),
             xdate=True,
             ydate=False,
@@ -488,17 +510,6 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
             linewidth=2,
             color=avg_color,
         )
-
-    # X limits
-    # By default, start with the first recorded data.
-    start_date = min(df.dates)
-    if format_opts["start-date"]:
-        start_date = parse_date(format_opts["start-date"])
-    # By default, stop with today's data (even though a lot of times, it is incomplete).
-    end_date = parse_date("today")
-    if format_opts["end-date"]:
-        end_date = parse_date(format_opts["end-date"])
-    ax.set_xlim([start_date, end_date])
 
     # Y limits
     if not format_opts["log"]:
