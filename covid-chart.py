@@ -155,10 +155,11 @@ def main():
     # DEBUG
 
     parser.add_argument(
+        "-d",
         "--debug",
         dest="debug",
-        action="store_true",
-        default=False,
+        action="count",
+        default=0,
         help="print extra debug info",
         required=False,
     )
@@ -166,6 +167,7 @@ def main():
     args = vars(parser.parse_args())
     global debug
     debug = args.pop("debug")
+    print("debug = %d" % debug)
 
     read_data_and_generate_charts(args)
 
@@ -198,10 +200,10 @@ def read_data_and_generate_charts(args):
         exit_on_error("unknown source '%s'" % source)
 
     # This amount of debugging is absurd.
-    ## if debug:
-    ##     print("all location data:")
-    ##     print(json.dumps(all_loc_data))
-    ##     print("")
+    if debug > 2:
+        print("all location data:")
+        print(json.dumps(all_loc_data))
+        print("")
 
     # COMPILE A LIST OF LOCATIONS THAT WE'RE INTERESTED IN
 
@@ -440,8 +442,8 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
     if new:
         series = series.diff()
 
-    if debug:
-        pandas.set_option("display.max_rows", None, "display.max_columns", None)
+    pandas.set_option("display.max_rows", None, "display.max_columns", None)
+    if debug > 1:
         print('unfiltered data:')
         print(df1)
         print('data filtered by date range (%s ~ %s):' % (start_date, end_date))
@@ -482,7 +484,7 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
         plt.bar(
             df2.dates,
             series,
-            width=0.8,
+            width=1.0,   # 0.8 causes "picket fence" effect
             bottom=None,
             align="center",
             label=series_label,
@@ -517,32 +519,42 @@ def generate_chart(datadict, location_key, new, deaths, format_opts, out, bulk=F
         try:
             highest1, highest2 = series.nlargest(2)
         except ValueError:
-            highest1 = highest2 = 1
+            highest1 = highest2 = 0
+        if highest1 == highest2 == 0:
+            print("skipping chart with no non-zero data points: %s" % title)
+            return
         if debug:
             print("highest1 = %d, highest2 = %d" % (highest1, highest2))
         # If the highest value is within 25% of the values on either side, then it's not a spike.
         maxjump = 1.25
-        index1 = series.idxmax()
+        try:
+            index1 = series.idxmax()
+        except ValueError:
+            index1 = None
         spike = True
-        if index1 == len(series):
-            if debug:
-                print("index1 %d is the last entry, not a spike" % index1)
-            spike = False
-        elif index1 > 1 and highest1 < maxjump * series[index1-1]:
-            if debug:
-                print("highest1 < %.f * %d [at posn -1], not a spike" % (maxjump, series[index1-1]))
-            spike = False
-        elif index1 < len(series) - 1 and highest1 < maxjump * series[index1+1]:
-            if debug:
-                print("highest1 < %.f * %d [at posn +1], setting ymax = %d" % (maxjump, series[index1+1]))
-            spike = False
-        # If the highest value is within 25% of the second-highest value, then it's not a spike.
-        elif highest1 < maxjump * highest2:
-            spike = False
+        if index1 is not None:
+            if index1 == len(series):
+                if debug:
+                    print("index1 %d is the last entry, not a spike" % index1)
+                spike = False
+            elif index1 > 1 and highest1 < maxjump * series.get(index1-1, 0):
+                if debug:
+                    print("highest1 < %.f * %d [at posn -1], not a spike" % (maxjump, series[index1-1]))
+                spike = False
+            elif index1 < (len(series) - 1) and highest1 < maxjump * series.get(index1+1, 0):
+                if debug:
+                    print("highest1 < %.f * %d [at posn +1], not a spike" % (maxjump, series[index1+1]))
+                spike = False
+            # If the highest value is within 25% of the second-highest value, then it's not a spike.
+            elif highest1 < maxjump * highest2:
+                spike = False
         # Use the highest -- or maybe second-highest -- value as ymax.
         ymax = highest1
         if spike:
             ymax = highest2
+        if ymax == 0:
+            print("skipping chart with no data points: %s" % title)
+            return
         # Leave a little margin at the top.
         ax.set_ylim([0, ymax*1.05])
 
@@ -645,6 +657,8 @@ def get_jhu_data(git_root):
             date_str = csv_datetime.strftime("%Y-%m-%d")
             csv_filename = os.path.join(dir_name, file_name)
             with open(csv_filename) as csv_file_obj:
+                if debug:
+                    print("ingesting %s" % csv_filename)
 
                 csv_dict_reader = csv.DictReader(csv_file_obj)
                 for row in csv_dict_reader:
@@ -667,11 +681,11 @@ def get_jhu_data(git_root):
                         # location_key = join_location_key(*country_state_county)
                         results[location_key][date_str]["cases"] += csv_cases
                         results[location_key][date_str]["deaths"] += csv_deaths
-                        # if debug:
-                        #     print(
-                        #         "date=%s, location=%s, cases=%d, deaths=%d"
-                        #         % (date_str, location_key, csv_cases, csv_deaths)
-                        #     )
+                        if debug > 2:
+                            print(
+                                "date=%s, location=%s, cases=%d, deaths=%d"
+                                % (date_str, location_key, csv_cases, csv_deaths)
+                            )
 
     return results
 
@@ -768,7 +782,7 @@ def get_wake_data(location_key):
     )
     raw = json.loads(rsp.content)
 
-    if debug:
+    if debug > 1:
         print(json.dumps(raw))
     result_set = raw["results"][0]["result"]["data"]["dsr"]["DS"][0]["PH"][0]["DM0"]
     for i in result_set:
@@ -849,7 +863,7 @@ def get_wake_data(location_key):
     )
     raw = json.loads(rsp.content)
 
-    if debug:
+    if debug > 1:
         print(json.dumps(raw))
     result_set = raw["results"][0]["result"]["data"]["dsr"]["DS"][0]["PH"][0]["DM0"]
     for i in result_set:
